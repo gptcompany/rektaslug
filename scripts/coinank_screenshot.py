@@ -85,21 +85,25 @@ async def coinank_login(page, email: str, password: str) -> bool:
     try:
         login_btn = page.locator('button:has-text("Login")').first
         await login_btn.click(timeout=5000)
-        await page.wait_for_timeout(1500)
+        await page.wait_for_timeout(2000)
 
-        await page.locator('input[placeholder*="E-Mail"], input[placeholder*="mail"]').first.fill(
-            email, timeout=5000
-        )
-        await page.locator('input[type="password"]').first.fill(password, timeout=5000)
+        # Coinank uses id-based inputs (no placeholder)
+        email_input = page.locator("#form_item_name")
+        pwd_input = page.locator("#form_item_password")
 
-        # Click the Login button inside the modal form
-        modal_login = page.locator('.ant-modal-content button:has-text("Login")').first
-        await modal_login.click(timeout=5000)
-        await page.wait_for_timeout(3000)
+        await email_input.fill(email, timeout=5000)
+        await pwd_input.fill(password, timeout=5000)
 
-        # Verify login: modal should close
-        is_visible = await page.locator(".ant-modal-content").is_visible()
-        return not is_visible
+        # Click the submit Login button (the blue one inside the form)
+        submit_buttons = page.locator('button:has-text("Login")')
+        # The last Login button is the submit inside the modal
+        count = await submit_buttons.count()
+        await submit_buttons.nth(count - 1).click(timeout=5000)
+        await page.wait_for_timeout(4000)
+
+        # Verify login: email input should disappear
+        still_visible = await email_input.is_visible()
+        return not still_visible
     except Exception as exc:
         print(f"warning: coinank login failed: {exc}")
         return False
@@ -111,8 +115,16 @@ async def download_chart(page, output_path: Path, timeout_ms: int = 15000) -> bo
         camera = page.locator(".anticon-camera").first
         await camera.wait_for(state="visible", timeout=10000)
 
+        # Dismiss any overlay that may intercept clicks (custom-mask, popups)
+        await page.evaluate(
+            """() => {
+            document.querySelectorAll('.custom-mask').forEach(el => el.remove());
+        }"""
+        )
+        await page.wait_for_timeout(500)
+
         async with page.expect_download(timeout=timeout_ms) as download_info:
-            await camera.click()
+            await camera.click(force=True)
         download = await download_info.value
         await download.save_as(str(output_path))
         return True
