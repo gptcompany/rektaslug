@@ -848,15 +848,15 @@ class DuckDBService:
               AND open_time >= (SELECT start_time FROM Params)
         ),
 
-        -- STEP 2: Get pre-calculated OI Delta (calculated during ingestion)
-        -- Uses oi_delta column populated by LAG() during CSV import
+        -- STEP 2: Compute OI Delta inline via LAG() window function
         OIDelta AS (
             SELECT
                 timestamp as candle_time,
-                oi_delta
+                open_interest_value - LAG(open_interest_value)
+                    OVER (ORDER BY timestamp) AS oi_delta
             FROM open_interest_history
             WHERE symbol = ?
-              AND timestamp >= (SELECT start_time FROM Params)
+              AND timestamp >= (SELECT start_time FROM Params) - INTERVAL '1 day'
         ),
 
         -- STEP 3: Infer position SIDE from candle direction + OI delta
