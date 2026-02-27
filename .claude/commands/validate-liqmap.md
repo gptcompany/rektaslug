@@ -11,50 +11,34 @@ Validate our liquidation map (`/liquidations/levels`) against Coinank `liq-map` 
 
 - **Local page**: `http://localhost:8000/liq_map_1w.html`
 - **Frontend source**: `frontend/liq_map_1w.html`
-- **Coinank reference script**: `scripts/coinank_screenshot.py --product map`
-- **Output directory**: `data/validation/`
+- **Pipeline script**: `scripts/validate_liqmap_visual.py`
+- **Coinank reference dependency**: `scripts/coinank_screenshot.py --product map`
+- **Output directory**: `data/validation/liqmap/`
+- **Manifest directory**: `data/validation/manifests/`
 - **API endpoint**: `/liquidations/levels?symbol=BTCUSDT&model=openinterest&timeframe=7`
 
 ## Orchestration Flow
 
-1. Ensure FastAPI is running:
+1. Run the full pipeline with dotenvx credentials injection:
    ```bash
-   uv run uvicorn src.liquidationheatmap.api.main:app --port 8000 &
+   dotenvx run -f /media/sam/1TB/.env -- \
+     uv run python scripts/validate_liqmap_visual.py \
+     --exchange binance --coin BTC --coinank-timeframe 1w
    ```
-2. Verify API returns data:
-   ```bash
-   curl -s "http://localhost:8000/liquidations/levels?symbol=BTCUSDT&model=openinterest&timeframe=7" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'long={len(d[\"long_liquidations\"])}, short={len(d[\"short_liquidations\"])}, price={d[\"current_price\"]}')"
-   ```
-3. Screenshot our page via Playwright:
-   ```bash
-   uv run python -c "
-   import asyncio
-   from playwright.async_api import async_playwright
-   async def shot():
-       async with async_playwright() as p:
-           b = await p.chromium.launch()
-           page = await b.new_page(viewport={'width':1920,'height':1080})
-           await page.goto('http://localhost:8000/liq_map_1w.html')
-           await page.wait_for_timeout(5000)
-           await page.screenshot(path='data/validation/ours_liqmap_1w.png')
-           await b.close()
-   asyncio.run(shot())
-   "
-   ```
-4. Screenshot Coinank liq-map:
-   ```bash
-   uv run python scripts/coinank_screenshot.py \
-     --product map --exchange binance --coin BTC --timeframe 1w \
-     --output data/validation/coinank_liqmap_binance_1w.png
-   ```
-5. Pass both screenshots to `alpha-visual` for comparison
+2. The script will:
+   - start FastAPI if needed
+   - preflight `/liquidations/levels`
+   - capture local screenshot (`/liq_map_1w.html`)
+   - capture Coinank screenshot (native download when logged in, crop fallback)
+   - write manifest JSON under `data/validation/manifests/`
+3. Pass the two output screenshots to `alpha-visual` for comparison
 
 ## Alpha-Visual Delegation Prompt
 
 ```text
 Compare these two liquidation map screenshots:
-- Local map (Plotly): data/validation/ours_liqmap_1w.png
-- Coinank reference: data/validation/coinank_liqmap_binance_1w.png
+- Local map (Plotly): <ours_screenshot_path>
+- Coinank reference: <coinank_screenshot_path>
 
 Task:
 1. Verify both images show valid liquidation map charts (bars + cumulative lines).
@@ -94,8 +78,8 @@ Important:
 ### Liquidation Map Validation Result
 - Exchange: binance
 - Timeframe: 1w
-- Local screenshot: `data/validation/ours_liqmap_1w.png`
-- Coinank screenshot: `data/validation/coinank_liqmap_binance_1w.png`
+- Local screenshot: `<ours_screenshot_path>`
+- Coinank screenshot: `<coinank_screenshot_path>`
 - Similarity score: 0-100
 - Decision: PASS | FAIL
 - Mismatches:
@@ -109,3 +93,4 @@ Important:
 - MMR is now computed per-bucket using official Binance tiers (not flat 0.4%).
 - Leverage weights are parameterized (default: 15/30/25/20/10%).
 - Coinank liq-map is per-exchange, making direct comparison with our Binance data possible.
+- Credentials for Coinank login are read from `COINANK_USER` and `COINANK_PASSWORD` via dotenvx.
