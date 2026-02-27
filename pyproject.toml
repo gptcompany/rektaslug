@@ -62,4 +62,5 @@ ignore = []
 dev = [
     "httpx>=0.28.1",
     "hypothesis>=6.148.2",
+    "playwright>=1.58.0",
 ]
