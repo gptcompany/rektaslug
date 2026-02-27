@@ -24,8 +24,8 @@ from typing import Any
 from urllib.error import URLError
 from urllib.request import urlopen
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from coinank_screenshot import capture_coinank_heatmap
-
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8000

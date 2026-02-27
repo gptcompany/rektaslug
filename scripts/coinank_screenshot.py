@@ -15,8 +15,10 @@ import argparse
 import asyncio
 from pathlib import Path
 
-
 COINANK_URL_TEMPLATE = "https://coinank.com/chart/derivatives/liq-heat-map/{pair}/{timeframe}"
+COINANK_LIQMAP_URL_TEMPLATE = (
+    "https://coinank.com/chart/derivatives/liq-map/{exchange}/{pair}/{timeframe}"
+)
 VIEWPORT_WIDTH = 1920
 VIEWPORT_HEIGHT = 1400
 
@@ -51,6 +53,14 @@ def build_coinank_url(coin: str, timeframe: str) -> str:
     symbol = normalize_coin(coin).lower()
     tf = normalize_timeframe(timeframe)
     return COINANK_URL_TEMPLATE.format(pair=f"{symbol}usdt", timeframe=tf)
+
+
+def build_coinank_liqmap_url(coin: str, timeframe: str, exchange: str = "binance") -> str:
+    symbol = normalize_coin(coin).lower()
+    tf = normalize_timeframe(timeframe)
+    return COINANK_LIQMAP_URL_TEMPLATE.format(
+        exchange=exchange, pair=f"{symbol}usdt", timeframe=tf
+    )
 
 
 async def dismiss_common_popups(page) -> None:
@@ -170,6 +180,111 @@ async def capture_coinank_heatmap(
             await browser.close()
 
 
+async def wait_for_canvas_liqmap_colors(page, timeout_seconds: int = 30) -> bool:
+    """Wait until the page canvas contains liq-map bar chart colors."""
+    try:
+        await page.wait_for_selector("canvas", state="visible", timeout=timeout_seconds * 1000)
+    except Exception:
+        return False
+
+    for _ in range(timeout_seconds):
+        has_colors = await page.evaluate(
+            f"""
+            () => {{
+                const canvas = document.querySelector('canvas');
+                if (!canvas) return false;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) return false;
+                const width = canvas.width;
+                const height = canvas.height;
+                if (!width || !height) return false;
+
+                let chartPixels = 0;
+                for (let i = 0; i < {CANVAS_SAMPLE_POINTS}; i++) {{
+                    const x = Math.floor(((i % 10) + 0.5) * width / 10);
+                    const y = Math.floor((Math.floor(i / 10) + 0.5) * height / 10);
+                    const pixel = ctx.getImageData(x, y, 1, 1).data;
+
+                    // Detect bar chart colors: cyan, blue, orange, pink/red
+                    const isCyan = pixel[1] > 150 && pixel[2] > 150 && pixel[0] < 150;
+                    const isBlue = pixel[2] > 150 && pixel[0] < 150 && pixel[1] < 200;
+                    const isOrange = pixel[0] > 200 && pixel[1] > 100 && pixel[2] < 100;
+                    const isPink = pixel[0] > 200 && pixel[1] < 120 && pixel[2] > 80;
+
+                    if (isCyan || isBlue || isOrange || isPink) {{
+                        chartPixels++;
+                    }}
+                }}
+
+                return chartPixels >= {CANVAS_HEATMAP_THRESHOLD};
+            }}
+            """
+        )
+        if has_colors:
+            await page.wait_for_timeout(1500)
+            return True
+        await page.wait_for_timeout(1000)
+    return False
+
+
+async def capture_coinank_liqmap(
+    coin: str,
+    timeframe: str,
+    exchange: str,
+    output_path: Path,
+    headless: bool = True,
+) -> Path:
+    """Capture a Coinank liq-map screenshot and return the saved path."""
+    try:
+        from playwright.async_api import async_playwright
+    except ImportError as exc:
+        raise RuntimeError(
+            "playwright is not installed. Run `uv add --dev playwright` and "
+            "`playwright install chromium`."
+        ) from exc
+
+    url = build_coinank_liqmap_url(coin, timeframe, exchange)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            headless=headless,
+            args=["--no-sandbox", "--disable-setuid-sandbox"],
+        )
+        page = await browser.new_page(
+            viewport={"width": VIEWPORT_WIDTH, "height": VIEWPORT_HEIGHT},
+            user_agent=(
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+            ),
+        )
+        try:
+            await page.goto(url, timeout=120000)
+            await page.wait_for_load_state("load", timeout=30000)
+            await page.wait_for_timeout(2000)
+            await dismiss_common_popups(page)
+
+            rendered = await wait_for_canvas_liqmap_colors(page, timeout_seconds=30)
+            if not rendered:
+                print(
+                    "warning: liq-map chart colors not detected "
+                    "within timeout, capturing anyway"
+                )
+
+            await page.screenshot(
+                path=str(output_path),
+                clip={
+                    "x": CROP_X,
+                    "y": 250,
+                    "width": CROP_WIDTH,
+                    "height": 1100,
+                },
+            )
+            return output_path
+        finally:
+            await browser.close()
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--coin", default="BTC", help="Coin symbol, e.g. BTC or ETH")
@@ -185,6 +300,18 @@ def parse_args() -> argparse.Namespace:
         help="Output PNG path",
     )
     parser.add_argument(
+        "--product",
+        choices=["heatmap", "map"],
+        default="heatmap",
+        help="Coinank product type: heatmap (liq-heat-map) or map (liq-map)",
+    )
+    parser.add_argument(
+        "--exchange",
+        choices=["binance", "bybit", "hyperliquid"],
+        default="binance",
+        help="Exchange for liq-map product (ignored for heatmap)",
+    )
+    parser.add_argument(
         "--headed",
         action="store_true",
         help="Run browser with UI for debugging",
@@ -195,20 +322,33 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     try:
-        saved = asyncio.run(
-            capture_coinank_heatmap(
-                coin=args.coin,
-                timeframe=args.timeframe,
-                output_path=args.output,
-                headless=not args.headed,
+        if args.product == "map":
+            saved = asyncio.run(
+                capture_coinank_liqmap(
+                    coin=args.coin,
+                    timeframe=args.timeframe,
+                    exchange=args.exchange,
+                    output_path=args.output,
+                    headless=not args.headed,
+                )
             )
-        )
+            url = build_coinank_liqmap_url(args.coin, args.timeframe, args.exchange)
+        else:
+            saved = asyncio.run(
+                capture_coinank_heatmap(
+                    coin=args.coin,
+                    timeframe=args.timeframe,
+                    output_path=args.output,
+                    headless=not args.headed,
+                )
+            )
+            url = build_coinank_url(args.coin, args.timeframe)
     except Exception as exc:
         print(f"error: {exc}")
         return 1
 
     print(f"saved: {saved}")
-    print(f"url: {build_coinank_url(args.coin, args.timeframe)}")
+    print(f"url: {url}")
     return 0
 
 
