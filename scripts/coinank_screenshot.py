@@ -2,7 +2,8 @@
 """Capture a cropped Coinank liquidation heatmap screenshot.
 
 Example:
-    uv run python scripts/coinank_screenshot.py --coin BTC --timeframe 1M --output /tmp/reference.png
+    uv run python scripts/coinank_screenshot.py \
+        --coin BTC --timeframe 1M --output /tmp/reference.png
 
 Prerequisites:
     - `playwright` Python package
@@ -13,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import os
 from pathlib import Path
 
 COINANK_URL_TEMPLATE = "https://coinank.com/chart/derivatives/liq-heat-map/{pair}/{timeframe}"
@@ -58,9 +60,7 @@ def build_coinank_url(coin: str, timeframe: str) -> str:
 def build_coinank_liqmap_url(coin: str, timeframe: str, exchange: str = "binance") -> str:
     symbol = normalize_coin(coin).lower()
     tf = normalize_timeframe(timeframe)
-    return COINANK_LIQMAP_URL_TEMPLATE.format(
-        exchange=exchange, pair=f"{symbol}usdt", timeframe=tf
-    )
+    return COINANK_LIQMAP_URL_TEMPLATE.format(exchange=exchange, pair=f"{symbol}usdt", timeframe=tf)
 
 
 async def dismiss_common_popups(page) -> None:
@@ -78,6 +78,47 @@ async def dismiss_common_popups(page) -> None:
             return
         except Exception:
             continue
+
+
+async def coinank_login(page, email: str, password: str) -> bool:
+    """Login to Coinank via the modal form. Returns True on success."""
+    try:
+        login_btn = page.locator('button:has-text("Login")').first
+        await login_btn.click(timeout=5000)
+        await page.wait_for_timeout(1500)
+
+        await page.locator('input[placeholder*="E-Mail"], input[placeholder*="mail"]').first.fill(
+            email, timeout=5000
+        )
+        await page.locator('input[type="password"]').first.fill(password, timeout=5000)
+
+        # Click the Login button inside the modal form
+        modal_login = page.locator('.ant-modal-content button:has-text("Login")').first
+        await modal_login.click(timeout=5000)
+        await page.wait_for_timeout(3000)
+
+        # Verify login: modal should close
+        is_visible = await page.locator(".ant-modal-content").is_visible()
+        return not is_visible
+    except Exception as exc:
+        print(f"warning: coinank login failed: {exc}")
+        return False
+
+
+async def download_chart(page, output_path: Path, timeout_ms: int = 15000) -> bool:
+    """Download chart via Coinank camera button. Returns True on success."""
+    try:
+        camera = page.locator(".anticon-camera").first
+        await camera.wait_for(state="visible", timeout=10000)
+
+        async with page.expect_download(timeout=timeout_ms) as download_info:
+            await camera.click()
+        download = await download_info.value
+        await download.save_as(str(output_path))
+        return True
+    except Exception as exc:
+        print(f"warning: chart download failed, will fallback to crop: {exc}")
+        return False
 
 
 async def wait_for_canvas_heatmap_colors(page, timeout_seconds: int = 30) -> bool:
@@ -131,8 +172,14 @@ async def capture_coinank_heatmap(
     timeframe: str,
     output_path: Path,
     headless: bool = True,
+    email: str | None = None,
+    password: str | None = None,
 ) -> Path:
-    """Capture a Coinank heatmap screenshot and return the saved path."""
+    """Capture a Coinank heatmap screenshot and return the saved path.
+
+    If email/password are provided, logs in first and attempts native chart
+    download via camera button. Falls back to screenshot crop on failure.
+    """
     try:
         from playwright.async_api import async_playwright
     except ImportError as exc:
@@ -162,9 +209,20 @@ async def capture_coinank_heatmap(
             await page.wait_for_timeout(2000)
             await dismiss_common_popups(page)
 
+            if email and password:
+                await coinank_login(page, email, password)
+
             rendered = await wait_for_canvas_heatmap_colors(page, timeout_seconds=30)
             if not rendered:
-                print("warning: canvas heatmap colors not detected within timeout, capturing anyway")
+                print(
+                    "warning: canvas heatmap colors not detected within timeout, capturing anyway"
+                )
+
+            # Try native download first, fallback to crop
+            if email and password:
+                downloaded = await download_chart(page, output_path)
+                if downloaded:
+                    return output_path
 
             await page.screenshot(
                 path=str(output_path),
@@ -233,8 +291,14 @@ async def capture_coinank_liqmap(
     exchange: str,
     output_path: Path,
     headless: bool = True,
+    email: str | None = None,
+    password: str | None = None,
 ) -> Path:
-    """Capture a Coinank liq-map screenshot and return the saved path."""
+    """Capture a Coinank liq-map screenshot and return the saved path.
+
+    If email/password are provided, logs in first and attempts native chart
+    download via camera button. Falls back to screenshot crop on failure.
+    """
     try:
         from playwright.async_api import async_playwright
     except ImportError as exc:
@@ -264,12 +328,18 @@ async def capture_coinank_liqmap(
             await page.wait_for_timeout(2000)
             await dismiss_common_popups(page)
 
+            if email and password:
+                await coinank_login(page, email, password)
+
             rendered = await wait_for_canvas_liqmap_colors(page, timeout_seconds=30)
             if not rendered:
-                print(
-                    "warning: liq-map chart colors not detected "
-                    "within timeout, capturing anyway"
-                )
+                print("warning: liq-map chart colors not detected within timeout, capturing anyway")
+
+            # Try native download first, fallback to crop
+            if email and password:
+                downloaded = await download_chart(page, output_path)
+                if downloaded:
+                    return output_path
 
             await page.screenshot(
                 path=str(output_path),
@@ -321,6 +391,13 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    email = os.environ.get("COINANK_USER")
+    password = os.environ.get("COINANK_PASSWORD")
+    if email and password:
+        print("info: COINANK credentials found, will attempt native download")
+    else:
+        print("info: no COINANK credentials, using screenshot crop fallback")
+
     try:
         if args.product == "map":
             saved = asyncio.run(
@@ -330,6 +407,8 @@ def main() -> int:
                     exchange=args.exchange,
                     output_path=args.output,
                     headless=not args.headed,
+                    email=email,
+                    password=password,
                 )
             )
             url = build_coinank_liqmap_url(args.coin, args.timeframe, args.exchange)
@@ -340,6 +419,8 @@ def main() -> int:
                     timeframe=args.timeframe,
                     output_path=args.output,
                     headless=not args.headed,
+                    email=email,
+                    password=password,
                 )
             )
             url = build_coinank_url(args.coin, args.timeframe)
