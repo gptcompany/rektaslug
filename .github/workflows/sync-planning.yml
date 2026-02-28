@@ -1,5 +1,5 @@
 name: Sync Planning
-on:
+"on":
   push:
     paths:
       - '.planning/**'
@@ -8,8 +8,12 @@ on:
 
 jobs:
   sync:
-    uses: gptcompany/.github/.github/workflows/_reusable-sync-planning.yml@main
+    permissions:
+      issues: write
+      contents: read
+    uses: gptcompany/claude-config/.github/workflows/_reusable-sync-planning.yml@main
     secrets: inherit
     with:
       framework: 'auto'
       create-project: true
+      sync-todos: true
