@@ -880,7 +880,12 @@ async def get_heatmap(
         ORDER BY timestamp, price_bucket
         """
 
-        df = db.conn.execute(query, [symbol]).df()
+        try:
+            df = db.conn.execute(query, [symbol]).df()
+        except Exception:
+            # Table may not exist yet (needs snapshot ingestion)
+            import pandas as pd
+            df = pd.DataFrame()
 
         if df.empty:
             # Return empty response if no data

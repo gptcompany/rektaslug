@@ -120,7 +120,10 @@ class TestFrontendVisual:
 
             # Check no critical errors (ignore expected errors like CORS for localhost)
             critical_errors = [
-                e for e in console_errors if "Failed to fetch" not in e and "CORS" not in e
+                e for e in console_errors
+                if "Failed to fetch" not in e
+                and "CORS" not in e
+                and 'URL scheme "file" is not supported' not in e
             ]
             assert len(critical_errors) == 0, f"Console errors found: {critical_errors}"
 
@@ -137,8 +140,8 @@ class TestFrontendVisual:
             await page.goto(f"file://{frontend_path}")
             await page.wait_for_timeout(1000)
 
-            # Check for heatmap container
-            heatmap_container = await page.query_selector("#heatmap-container")
+            # Check for heatmap container (coinglass_heatmap.html uses #chart-container)
+            heatmap_container = await page.query_selector("#chart-container, #heatmap-container")
             assert heatmap_container is not None, "Heatmap container not found"
 
             # Check for controls

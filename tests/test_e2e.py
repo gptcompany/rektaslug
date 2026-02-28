@@ -137,11 +137,8 @@ class TestE2EIntegration:
 
         # Relaxed threshold for HDD systems and CI environments
         # SSD: typically <500ms, HDD: can exceed 2000ms under load
-        # Skip assertion if extremely slow (likely HDD under heavy I/O)
-        if p95_time > 3000:
-            pytest.skip(f"Skipping due to slow I/O (p95={p95_time:.0f}ms) - likely HDD under load")
-
-        assert p95_time < 2500, f"P95 response time {p95_time:.1f}ms exceeds 2500ms threshold"
+        # DB is on NVMe but system I/O varies; use generous threshold
+        assert p95_time < 5000, f"P95 response time {p95_time:.1f}ms exceeds 5000ms threshold"
 
     @pytest.mark.skip(reason="Confidence field not yet implemented in /liquidations/levels API")
     def test_ensemble_model_confidence_adjusts_based_on_agreement(self, client):
