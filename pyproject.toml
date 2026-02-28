@@ -48,6 +48,9 @@ packages = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
+markers = [
+    "integration: tests requiring real external data or services",
+]
 # addopts = "--cov=src --cov-report=term-missing --cov-report=html"
 
 [tool.ruff]
