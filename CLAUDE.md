@@ -129,6 +129,22 @@ LiquidationHeatmap/
 - **Always use** `uv` for dependency management (not `pip`)
 - **Always test** before committing (`uv run pytest`)
 
+### Resource Safety (MANDATORY)
+
+Il PC è spesso sotto stress (DuckDB su 6B+ righe, multi-agent, build parallele).
+**Operazioni cautelative obbligatorie:**
+
+- **MAI** lanciare query su aggtrades_history (6B righe) senza `WHERE` temporale o batch per anno
+- **MAI** eseguire più ingestioni DuckDB in parallelo (single-writer lock)
+- **SEMPRE** processare dati in batch incrementali (per anno, per settimana, per mese)
+- **SEMPRE** aggiungere throttling (`time.sleep()`) tra batch pesanti
+- **SEMPRE** verificare che nessun processo tenga il DuckDB lock prima di scrivere:
+  ```bash
+  lsof /media/sam/2TB-NVMe/liquidationheatmap_db/liquidations.duckdb 2>/dev/null
+  ```
+- **Volume profile cache**: usare `CREATE TABLE ... AS SELECT ... WHERE year=X` anno per anno, MAI full scan
+- **Ingestioni CSV**: sequenziali, una alla volta, con I/O throttle (100ms minimo tra file)
+
 ---
 
 ## Development Principles

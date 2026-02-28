@@ -2,18 +2,10 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: liquidation-heatmap
-  description: Liquidation Heatmap - Cryptocurrency liquidation visualization
+  description: liquidation_heatmap repository
   annotations:
-    github.com/project-slug: gptprojectmanager/LiquidationHeatmap
     backstage.io/techdocs-ref: dir:.
-    grafana/dashboard-selector: "folder=trading"
-    grafana/alert-label-selector: "category=trading"
-    backstage.io/slo-template: slo-template-trading
-  tags:
-    - crypto
-    - liquidations
-    - visualization
-    - trading
+  tags: []
 spec:
   type: service
   lifecycle: production
