@@ -306,6 +306,37 @@ ingest_klines() {
     return $failed
 }
 
+ingest_metrics() {
+    log_section "Metrics Ingestion (long/short ratio, taker volume)"
+    local failed=0
+
+    if [ "$MODE" = "dry-run" ]; then
+        log "Skipping metrics (dry-run mode)"
+        return 0
+    fi
+
+    local start_date end_date
+    if [ "$MODE" = "full" ]; then
+        start_date="$FULL_START"
+        end_date="$YESTERDAY"
+    else
+        start_date="$WEEK_AGO"
+        end_date="$YESTERDAY"
+    fi
+
+    for symbol in $SYMBOLS; do
+        log "Ingesting ${symbol} metrics ($start_date -> $end_date)..."
+        uv run --project "$PROJECT_DIR" python "${PROJECT_DIR}/scripts/ingest_metrics.py" \
+            --symbol "$symbol" \
+            --start-date "$start_date" \
+            --end-date "$end_date" \
+            --data-dir "$DATA_DIR" \
+            --db "$DB_PATH" || { log "FAILED: ${symbol} metrics"; failed=$((failed + 1)); }
+    done
+
+    return $failed
+}
+
 # =============================================================================
 # Main execution
 # =============================================================================
@@ -377,6 +408,16 @@ if [ $KL_FAILED -eq 0 ]; then
     RESULTS="${RESULTS}Klines (5m+15m): OK\n"
 else
     RESULTS="${RESULTS}Klines: ${KL_FAILED} failed\n"
+fi
+
+# Phase 5: Metrics (long/short ratio, taker volume)
+ingest_metrics
+MT_FAILED=$?
+TOTAL_FAILED=$((TOTAL_FAILED + MT_FAILED))
+if [ $MT_FAILED -eq 0 ]; then
+    RESULTS="${RESULTS}Metrics: OK\n"
+else
+    RESULTS="${RESULTS}Metrics: ${MT_FAILED} failed\n"
 fi
 set -e
 
