@@ -1,95 +1,35 @@
 {
-  "best_tolerance": 2.0,
-  "best_f1": 0.8092753623188406,
+  "best_tolerance": 1.0,
+  "best_f1": 0.9142556549184641,
   "gate_2_passed": true,
   "results": [
     {
-      "symbol": "BTCUSDT",
+      "symbol": "ETHUSDT",
       "period": {
-        "start": "2025-11-10T00:00:00",
-        "end": "2025-12-24T00:00:00"
+        "start": "2025-12-01T00:00:00",
+        "end": "2026-02-27T00:00:00"
       },
       "config": {
-        "symbol": "BTCUSDT",
-        "start_date": "2025-11-10T00:00:00",
-        "end_date": "2025-12-24T00:00:00",
-        "tolerance_pct": 0.5,
-        "prediction_horizon_minutes": 60
-      },
-      "metrics": {
-        "precision": 1.0,
-        "recall": 0.1271,
-        "f1_score": 0.2255
-      },
-      "counts": {
-        "true_positives": 261,
-        "false_positives": 0,
-        "false_negatives": 1793,
-        "total_predictions": 261,
-        "total_liquidations": 2054
-      },
-      "snapshots_analyzed": 1029,
-      "processing_time_ms": 42311,
-      "gate_2_passed": false,
-      "error": null
-    },
-    {
-      "symbol": "BTCUSDT",
-      "period": {
-        "start": "2025-11-10T00:00:00",
-        "end": "2025-12-24T00:00:00"
-      },
-      "config": {
-        "symbol": "BTCUSDT",
-        "start_date": "2025-11-10T00:00:00",
-        "end_date": "2025-12-24T00:00:00",
+        "symbol": "ETHUSDT",
+        "start_date": "2025-12-01T00:00:00",
+        "end_date": "2026-02-27T00:00:00",
         "tolerance_pct": 1.0,
         "prediction_horizon_minutes": 60
       },
       "metrics": {
         "precision": 1.0,
-        "recall": 0.3009,
-        "f1_score": 0.4626
+        "recall": 0.8421,
+        "f1_score": 0.9143
       },
       "counts": {
-        "true_positives": 618,
+        "true_positives": 869,
         "false_positives": 0,
-        "false_negatives": 1436,
-        "total_predictions": 618,
-        "total_liquidations": 2054
+        "false_negatives": 163,
+        "total_predictions": 869,
+        "total_liquidations": 1032
       },
-      "snapshots_analyzed": 1029,
-      "processing_time_ms": 42849,
-      "gate_2_passed": false,
-      "error": null
-    },
-    {
-      "symbol": "BTCUSDT",
-      "period": {
-        "start": "2025-11-10T00:00:00",
-        "end": "2025-12-24T00:00:00"
-      },
-      "config": {
-        "symbol": "BTCUSDT",
-        "start_date": "2025-11-10T00:00:00",
-        "end_date": "2025-12-24T00:00:00",
-        "tolerance_pct": 2.0,
-        "prediction_horizon_minutes": 60
-      },
-      "metrics": {
-        "precision": 1.0,
-        "recall": 0.6796,
-        "f1_score": 0.8093
-      },
-      "counts": {
-        "true_positives": 1396,
-        "false_positives": 0,
-        "false_negatives": 658,
-        "total_predictions": 1396,
-        "total_liquidations": 2054
-      },
-      "snapshots_analyzed": 1029,
-      "processing_time_ms": 42396,
+      "snapshots_analyzed": 528,
+      "processing_time_ms": 38782,
       "gate_2_passed": true,
       "error": null
     }

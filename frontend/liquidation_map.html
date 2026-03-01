@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Binance BTC/USDT Liquidation Map</title>
+    <title>Binance Liquidation Map</title>
     <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>Binance BTC/USDT Liquidation Map</h1>
+    <h1 id="pageTitle">Binance BTC/USDT Liquidation Map</h1>
 
     <div style="background: #1f2937; padding: 12px; margin: 10px 0; border-left: 3px solid #f59e0b; border-radius: 4px;">
         <strong style="color: #f59e0b;">ℹ️ Important:</strong>
@@ -17,6 +17,10 @@
 
     <div class="controls" style="display: flex; justify-content: space-between; align-items: center;">
         <div>
+            <select id="symbolSelect" onchange="loadLevels()">
+                <option value="BTCUSDT" selected>BTC/USDT</option>
+                <option value="ETHUSDT">ETH/USDT</option>
+            </select>
             <select id="modelSelect">
                 <option value="openinterest" selected>Open Interest</option>
                 <!-- Future models can be added here -->
@@ -46,11 +50,14 @@
         };
 
         async function loadLevels() {
+            const symbol = document.getElementById('symbolSelect').value;
             const model = document.getElementById('modelSelect').value;
             const timeframe = document.getElementById('timeframeSelect').value;
+            const displaySymbol = symbol.replace('USDT', '/USDT');
+            document.getElementById('pageTitle').textContent = `Binance ${displaySymbol} Liquidation Map`;
 
             try {
-                const response = await fetch(`http://localhost:8000/liquidations/levels?symbol=BTCUSDT&model=${model}&timeframe=${timeframe}`);
+                const response = await fetch(`http://localhost:8000/liquidations/levels?symbol=${symbol}&model=${model}&timeframe=${timeframe}`);
                 const data = await response.json();
 
                 renderLiquidationMap(data);
@@ -176,9 +183,11 @@
             });
 
             const timeframe = document.getElementById('timeframeSelect').value;
+            const selectedSymbol = document.getElementById('symbolSelect').value;
+            const displayPair = selectedSymbol.replace('USDT', '/USDT');
             const layout = {
                 title: {
-                    text: `Binance BTC/USDT Perpetual - ${data.model} (${timeframe} day)`,
+                    text: `Binance ${displayPair} Perpetual - ${data.model} (${timeframe} day)`,
                     font: { size: 16 }
                 },
                 xaxis: {
@@ -286,6 +295,11 @@
 
             // Add event listener for model selector
             document.getElementById('modelSelect').addEventListener('change', () => {
+                loadLevels();
+            });
+
+            // Add event listener for symbol selector
+            document.getElementById('symbolSelect').addEventListener('change', () => {
                 loadLevels();
             });
 

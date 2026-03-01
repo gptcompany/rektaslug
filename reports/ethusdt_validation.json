@@ -1,0 +1,94 @@
+{
+  "best_tolerance": 2.0,
+  "best_f1": 0.9995,
+  "gate_2_passed": true,
+  "results": [
+    {
+      "run_id": "ad3e7b5c-9ac9-41c6-afdb-79e6e71291bf",
+      "started_at": "2026-02-28T20:21:31.796893",
+      "completed_at": "2026-02-28T20:22:13.270839",
+      "trigger_type": "manual",
+      "triggered_by": "cli",
+      "symbol": "ETHUSDT",
+      "status": "completed",
+      "duration_seconds": 41,
+      "gate_2_decision": "acceptable",
+      "gate_2_reason": "F1=54.75% acceptable (40-60%)",
+      "overall_grade": "F",
+      "overall_score": 54.75,
+      "validation_types": [
+        "backtest"
+      ],
+      "sub_results": {
+        "backtest": "backtest_ad3e7b5c-9ac9-41c6-afdb-79e6e71291bf",
+        "coinglass": null,
+        "realtime": null
+      },
+      "error_message": null,
+      "config": {
+        "tolerance_pct": 0.5,
+        "prediction_horizon_minutes": 60,
+        "start_date": "2025-12-01T00:00:00",
+        "end_date": "2026-02-27T00:00:00"
+      }
+    },
+    {
+      "run_id": "c31ef9db-cd05-4db7-83e6-4776278f4b3c",
+      "started_at": "2026-02-28T20:22:13.271742",
+      "completed_at": "2026-02-28T20:22:53.806426",
+      "trigger_type": "manual",
+      "triggered_by": "cli",
+      "symbol": "ETHUSDT",
+      "status": "completed",
+      "duration_seconds": 40,
+      "gate_2_decision": "pass",
+      "gate_2_reason": "F1=91.43% >= 60% threshold",
+      "overall_grade": "A",
+      "overall_score": 91.43,
+      "validation_types": [
+        "backtest"
+      ],
+      "sub_results": {
+        "backtest": "backtest_c31ef9db-cd05-4db7-83e6-4776278f4b3c",
+        "coinglass": null,
+        "realtime": null
+      },
+      "error_message": null,
+      "config": {
+        "tolerance_pct": 1.0,
+        "prediction_horizon_minutes": 60,
+        "start_date": "2025-12-01T00:00:00",
+        "end_date": "2026-02-27T00:00:00"
+      }
+    },
+    {
+      "run_id": "83b384d1-e4ea-479d-84ff-f0206c2e201b",
+      "started_at": "2026-02-28T20:22:53.806985",
+      "completed_at": "2026-02-28T20:23:34.002574",
+      "trigger_type": "manual",
+      "triggered_by": "cli",
+      "symbol": "ETHUSDT",
+      "status": "completed",
+      "duration_seconds": 40,
+      "gate_2_decision": "pass",
+      "gate_2_reason": "F1=99.95% >= 60% threshold",
+      "overall_grade": "A",
+      "overall_score": 99.95,
+      "validation_types": [
+        "backtest"
+      ],
+      "sub_results": {
+        "backtest": "backtest_83b384d1-e4ea-479d-84ff-f0206c2e201b",
+        "coinglass": null,
+        "realtime": null
+      },
+      "error_message": null,
+      "config": {
+        "tolerance_pct": 2.0,
+        "prediction_horizon_minutes": 60,
+        "start_date": "2025-12-01T00:00:00",
+        "end_date": "2026-02-27T00:00:00"
+      }
+    }
+  ]
+}

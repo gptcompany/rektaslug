@@ -1,0 +1,58 @@
+# Binance Futures Tier Configuration - ETHUSDT
+# Standard 5-tier structure for perpetual futures
+# Maintenance amounts are derived automatically using continuity formula
+
+symbol: ETHUSDT
+version: binance-2025-v1
+
+tiers:
+  # Tier 1: $0 - $10k @ 0.5% maintenance margin
+  - tier_number: 1
+    min_notional: 0
+    max_notional: 10000
+    margin_rate: 0.005  # 0.5%
+    # MA = 0 (first tier always has MA = 0)
+
+  # Tier 2: $10k - $100k @ 1.0% maintenance margin
+  - tier_number: 2
+    min_notional: 10000
+    max_notional: 100000
+    margin_rate: 0.010  # 1.0%
+    # MA = 50 (derived: 0 + 10000 * (0.010 - 0.005))
+
+  # Tier 3: $100k - $500k @ 2.5% maintenance margin
+  - tier_number: 3
+    min_notional: 100000
+    max_notional: 500000
+    margin_rate: 0.025  # 2.5%
+    # MA = 1550 (derived: 50 + 100000 * (0.025 - 0.010))
+
+  # Tier 4: $500k - $1M @ 5.0% maintenance margin
+  - tier_number: 4
+    min_notional: 500000
+    max_notional: 1000000
+    margin_rate: 0.050  # 5.0%
+    # MA = 14050 (derived: 1550 + 500000 * (0.050 - 0.025))
+
+  # Tier 5: $1M - $2M @ 10.0% maintenance margin
+  - tier_number: 5
+    min_notional: 1000000
+    max_notional: 2000000
+    margin_rate: 0.100  # 10.0%
+    # MA = 64050 (derived: 14050 + 1000000 * (0.100 - 0.050))
+
+# Notes:
+# - Maintenance amounts (MA) are calculated automatically by the loader
+# - MA ensures mathematical continuity at tier boundaries
+# - Formula: MA[i] = MA[i-1] + boundary * (rate[i] - rate[i-1])
+# - At boundaries, margin calculations from adjacent tiers are identical
+#
+# ETH has smaller notional boundaries than BTC due to lower market cap
+# Same margin rate progression: 0.5% -> 1.0% -> 2.5% -> 5.0% -> 10.0%
+#
+# Example continuity at $10k boundary:
+#   Tier 1: 10000 * 0.005 - 0 = $50
+#   Tier 2: 10000 * 0.010 - 50 = $50
+#
+# Source: Binance Futures official tier structure (as of 2025)
+# Updates: Check https://www.binance.com/en/futures/trading-rules/perpetual for changes

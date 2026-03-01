@@ -26,6 +26,16 @@ class TestSymbolConsistency:
         return ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "ADAUSDT"]
 
     @pytest.fixture
+    def symbols_without_custom_config(self) -> list[str]:
+        """Symbols that use the default BTC-based tier config (no custom YAML)."""
+        return ["BNBUSDT", "SOLUSDT", "ADAUSDT"]
+
+    @pytest.fixture
+    def symbols_with_custom_config(self) -> list[str]:
+        """Symbols that have their own tier YAML config."""
+        return ["BTCUSDT", "ETHUSDT"]
+
+    @pytest.fixture
     def cache_with_symbols(self, default_symbols) -> TierCache:
         """Cache preloaded with multiple symbols."""
         cache = TierCache()
@@ -33,19 +43,22 @@ class TestSymbolConsistency:
             cache.get_or_default(symbol)
         return cache
 
-    def test_all_symbols_use_same_default_tier_structure(self, default_symbols):
+    def test_all_symbols_use_same_default_tier_structure(self, symbols_without_custom_config):
         """
-        Test that all symbols using default configuration have identical tier structure.
+        Test that symbols WITHOUT custom config have identical default tier structure.
 
         Consistency Requirement:
         - Same number of tiers
         - Same tier boundaries
         - Same margin rates
         - Same maintenance amounts
+
+        Note: Symbols with custom YAML configs (BTCUSDT, ETHUSDT) may have
+        different tier boundaries and are excluded from this uniformity test.
         """
         cache = TierCache()
 
-        configs = [cache.get_or_default(symbol) for symbol in default_symbols]
+        configs = [cache.get_or_default(symbol) for symbol in symbols_without_custom_config]
 
         # All should have same number of tiers
         tier_counts = [len(config.tiers) for config in configs]
@@ -76,18 +89,22 @@ class TestSymbolConsistency:
             mas = [tier.maintenance_amount for tier in tiers]
             assert all(ma == mas[0] for ma in mas), f"Tier {tier_idx + 1} MA mismatch"
 
-    def test_same_position_same_margin_across_symbols(self, default_symbols):
+    def test_same_position_same_margin_across_symbols(self, symbols_without_custom_config):
         """
-        Test that same position size yields same margin across symbols.
+        Test that same position size yields same margin across default-config symbols.
 
         Independence Test:
         - Same notional amount
         - Same tier structure (default)
         - Should calculate identical margins
+
+        Note: Only tests symbols using default config. Symbols with custom configs
+        (BTCUSDT, ETHUSDT) have different tier boundaries by design.
         """
         cache = TierCache()
         calculators = {
-            symbol: MarginCalculator(cache.get_or_default(symbol)) for symbol in default_symbols
+            symbol: MarginCalculator(cache.get_or_default(symbol))
+            for symbol in symbols_without_custom_config
         }
 
         test_positions = [
@@ -181,7 +198,7 @@ class TestSymbolConsistency:
         for symbol in default_symbols[1:]:
             assert symbol in cache
 
-    def test_concurrent_calculations_across_symbols(self, default_symbols):
+    def test_concurrent_calculations_across_symbols(self, symbols_without_custom_config):
         """
         Test that concurrent calculations for different symbols work correctly.
 
@@ -189,12 +206,16 @@ class TestSymbolConsistency:
         - Multiple symbols calculated simultaneously
         - Results remain consistent
         - No cross-contamination
+
+        Note: Only tests default-config symbols. Custom-config symbols have
+        different tier structures by design.
         """
         cache = TierCache()
 
         # Prepare calculators for all symbols
         calculators = {
-            symbol: MarginCalculator(cache.get_or_default(symbol)) for symbol in default_symbols
+            symbol: MarginCalculator(cache.get_or_default(symbol))
+            for symbol in symbols_without_custom_config
         }
 
         # Calculate margins for same position across all symbols
@@ -205,7 +226,7 @@ class TestSymbolConsistency:
             margins[symbol] = calc.calculate_margin(position)
 
         # All should calculate successfully
-        assert len(margins) == len(default_symbols)
+        assert len(margins) == len(symbols_without_custom_config)
 
         # All values should be identical (using default config)
         margin_values = list(margins.values())
@@ -236,30 +257,30 @@ class TestSymbolConsistency:
             for tier in config.tiers:
                 assert tier.symbol == symbol
 
-    def test_version_consistency_across_default_symbols(self, default_symbols):
+    def test_version_consistency_across_default_symbols(self, symbols_without_custom_config):
         """
         Test that all symbols using default config have same version.
 
         Version Tracking:
         - Default configs share version
-        - Custom configs may have different versions
+        - Custom configs (BTCUSDT, ETHUSDT) may have different versions
         """
         cache = TierCache()
 
-        configs = [cache.get_or_default(symbol) for symbol in default_symbols]
+        configs = [cache.get_or_default(symbol) for symbol in symbols_without_custom_config]
         versions = [config.version for config in configs]
 
         # All default configs should have same version
         assert all(v == versions[0] for v in versions), "Default config versions should match"
 
-    def test_margin_calculation_deterministic_across_symbols(self, default_symbols):
+    def test_margin_calculation_deterministic_across_symbols(self, symbols_without_custom_config):
         """
-        Test that margin calculations are deterministic across symbols.
+        Test that margin calculations are deterministic across default-config symbols.
 
         Determinism:
         - Same inputs always produce same outputs
         - No randomness or time dependencies
-        - Consistent across symbols
+        - Consistent across symbols with same tier config
         """
         cache = TierCache()
 
@@ -273,7 +294,7 @@ class TestSymbolConsistency:
         for position in test_positions:
             results_by_symbol = {}
 
-            for symbol in default_symbols:
+            for symbol in symbols_without_custom_config:
                 calc = MarginCalculator(cache.get_or_default(symbol))
 
                 # Calculate same position 3 times
@@ -292,17 +313,21 @@ class TestSymbolConsistency:
                 f"Cross-symbol inconsistency at ${position}"
             )
 
-    def test_tier_lookup_consistency_across_symbols(self, default_symbols):
+    def test_tier_lookup_consistency_across_symbols(self, symbols_without_custom_config):
         """
-        Test that tier lookup is consistent across symbols.
+        Test that tier lookup is consistent across default-config symbols.
 
         Tier Selection:
         - Same position maps to same tier number
-        - Tier boundaries align
+        - Tier boundaries align (BTC default boundaries)
         - No off-by-one errors
+
+        Note: Only tests default-config symbols. BTCUSDT and ETHUSDT have
+        custom configs with different tier boundaries.
         """
         cache = TierCache()
 
+        # These boundaries match the BTC default tier structure
         test_cases = [
             (Decimal("25000"), 1),  # Middle of tier 1: (0, 50000]
             (Decimal("49999"), 1),  # Just before boundary
@@ -319,13 +344,50 @@ class TestSymbolConsistency:
         ]
 
         for position, expected_tier in test_cases:
-            for symbol in default_symbols:
+            for symbol in symbols_without_custom_config:
                 calc = MarginCalculator(cache.get_or_default(symbol))
                 tier = calc.get_tier_for_position(position)
 
                 assert tier.tier_number == expected_tier, (
                     f"{symbol}: Position ${position:,.0f} should be tier {expected_tier}, got {tier.tier_number}"
                 )
+
+    def test_ethusdt_has_custom_tier_boundaries(self):
+        """
+        Test that ETHUSDT loads its custom tier config with ETH-specific boundaries.
+
+        ETH has smaller notional boundaries than BTC:
+        - ETH tier 1 max: $10,000 (vs BTC $50,000)
+        - ETH tier 5 max: $2,000,000 (vs BTC $50,000,000)
+        """
+        cache = TierCache()
+        eth_config = cache.get_or_default("ETHUSDT")
+
+        assert eth_config.symbol == "ETHUSDT"
+        assert len(eth_config.tiers) == 5
+
+        # ETH tier 1: 0 - 10k
+        assert eth_config.tiers[0].max_notional == Decimal("10000")
+        # ETH tier 2: 10k - 100k
+        assert eth_config.tiers[1].min_notional == Decimal("10000")
+        assert eth_config.tiers[1].max_notional == Decimal("100000")
+        # Same margin rates as BTC
+        assert eth_config.tiers[0].margin_rate == Decimal("0.005")
+        assert eth_config.tiers[1].margin_rate == Decimal("0.010")
+
+    def test_custom_configs_each_valid_independently(self, symbols_with_custom_config):
+        """
+        Test that each custom-config symbol passes validation independently.
+        """
+        validator = TierValidator()
+        cache = TierCache()
+
+        for symbol in symbols_with_custom_config:
+            config = cache.get_or_default(symbol)
+            result = validator.validate(config)
+
+            assert result.is_valid, f"{symbol} validation failed: {result.errors}"
+            assert all(result.continuity_checks.values()), f"{symbol} has continuity breaks"
 
     def test_cache_preload_all_symbols_consistent(self, default_symbols):
         """

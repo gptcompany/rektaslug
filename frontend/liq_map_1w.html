@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BTC Liquidation Map - 1 Week (Binance)</title>
+    <title>Liquidation Map - 1 Week (Binance)</title>
     <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>BTC Liquidation Map - 1 Week (Binance)</h1>
+    <h1 id="pageTitle">BTC Liquidation Map - 1 Week (Binance)</h1>
     <p style="color: #8b949e; margin-top: -10px; margin-bottom: 10px; font-size: 0.9em;">
-        Validation view - compare with Coinank liq-map/binance/btcusdt/1w
+        Validation view - compare with Coinank liq-map
     </p>
 
     <div style="background: #1f2937; padding: 12px; margin: 10px 0; border-left: 3px solid #f59e0b; border-radius: 4px;">
@@ -18,7 +18,11 @@
         <span style="color: #c9d1d9;"> Results reflect real whale positioning data. Asymmetric distributions (e.g., 100% short, 0% long) indicate one-sided institutional activity and are expected during trending markets.</span>
     </div>
 
-    <div class="controls" style="display: flex; justify-content: flex-start; align-items: center;">
+    <div class="controls" style="display: flex; justify-content: flex-start; align-items: center; gap: 12px;">
+        <select id="symbolSelect" onchange="loadLevels()" style="padding: 8px 12px; background: #161b22; color: #c9d1d9; border: 1px solid #30363d; border-radius: 6px;">
+            <option value="BTCUSDT" selected>BTC/USDT</option>
+            <option value="ETHUSDT">ETH/USDT</option>
+        </select>
         <span id="currentPrice" style="color: #f0b90b; font-weight: bold;"></span>
     </div>
     <div id="liquidation-map" style="width: 100%; height: 600px;"></div>
@@ -38,8 +42,12 @@
         const CHART_MODE = urlParams.get('chart') || 'bar';
 
         async function loadLevels() {
+            const symbol = document.getElementById('symbolSelect').value;
+            const displaySymbol = symbol.replace('USDT', '');
+            document.getElementById('pageTitle').textContent = `${displaySymbol} Liquidation Map - 1 Week (Binance)`;
+
             try {
-                const response = await fetch('/liquidations/levels?symbol=BTCUSDT&model=openinterest&timeframe=7');
+                const response = await fetch(`/liquidations/levels?symbol=${symbol}&model=openinterest&timeframe=7`);
                 const data = await response.json();
 
                 renderLiquidationMap(data);
@@ -202,9 +210,11 @@
                 yaxis: 'y'
             });
 
+            const selectedSymbol = document.getElementById('symbolSelect').value;
+            const displayPair = selectedSymbol.replace('USDT', '/USDT');
             const layout = {
                 title: {
-                    text: 'Binance BTC/USDT Perpetual - openinterest (7 day)',
+                    text: `Binance ${displayPair} Perpetual - openinterest (7 day)`,
                     font: { size: 16 }
                 },
                 xaxis: {

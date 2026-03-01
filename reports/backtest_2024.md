@@ -1,48 +1,48 @@
-# Backtest Report: BTCUSDT
+# Backtest Report: ETHUSDT
 
-**Generated**: 2025-12-28T21:26:29.810509
-**Period**: 2025-11-10 to 2025-12-24
+**Generated**: 2026-02-28T20:21:11.136378
+**Period**: 2025-12-01 to 2026-02-27
 **Gate 2 Status**: ✅ PASSED
 
 ## Configuration
 
 | Parameter | Value |
 |-----------|-------|
-| Symbol | BTCUSDT |
-| Tolerance | 2.0% |
+| Symbol | ETHUSDT |
+| Tolerance | 1.0% |
 | Prediction Horizon | 60 min |
-| Snapshots Analyzed | 1029 |
+| Snapshots Analyzed | 528 |
 
 ## Metrics
 
 | Metric | Value | Threshold |
 |--------|-------|-----------|
 | **Precision** | 100.00% | - |
-| **Recall** | 67.96% | - |
-| **F1 Score** | 80.93% | ≥60% |
+| **Recall** | 84.21% | - |
+| **F1 Score** | 91.43% | ≥60% |
 
 ## Confusion Matrix
 
 |  | Predicted + | Predicted - |
 |--|-------------|-------------|
-| **Actual +** | TP: 1396 | FN: 658 |
+| **Actual +** | TP: 869 | FN: 163 |
 | **Actual -** | FP: 0 | TN: - |
 
 ## Summary
 
-- **Total Predictions**: 1396
-- **Total Liquidations**: 2054
-- **True Positives**: 1396 (correctly predicted)
+- **Total Predictions**: 869
+- **Total Liquidations**: 1032
+- **True Positives**: 869 (correctly predicted)
 - **False Positives**: 0 (false alarms)
-- **False Negatives**: 658 (missed liquidations)
+- **False Negatives**: 163 (missed liquidations)
 
 ## Interpretation
 
 **Precision (100.0%)**: Of all predicted zones, 100.0% were actually hit.
 
-**Recall (68.0%)**: Of all actual liquidations, 68.0% were predicted.
+**Recall (84.2%)**: Of all actual liquidations, 84.2% were predicted.
 
-**F1 Score (80.9%)**: Harmonic mean of precision and recall.
+**F1 Score (91.4%)**: Harmonic mean of precision and recall.
 
 ## Gate 2 Decision
 
@@ -51,7 +51,7 @@ IF F1 >= 0.6: MODEL VALIDATED ✅
 ELIF F1 >= 0.4: ACCEPTABLE ⚠️
 ELSE: STOP - Model rework required ❌
 
-Current F1: 80.93% → ✅ PASSED
+Current F1: 91.43% → ✅ PASSED
 ```
 
 ---
