@@ -1048,17 +1048,19 @@ class DuckDBService:
 
         Per spec.md Phase 2 and data-model.md.
         """
-        # Create liquidation_snapshots table (simpler schema without sequences)
+        # Create liquidation_snapshots table (aligned with production schema)
         self.conn.execute("""
             CREATE TABLE IF NOT EXISTS liquidation_snapshots (
                 id INTEGER PRIMARY KEY,
                 timestamp TIMESTAMP NOT NULL,
                 symbol VARCHAR(20) NOT NULL,
-                price_bucket DECIMAL(18, 2) NOT NULL,
-                side VARCHAR(10) NOT NULL,
-                active_volume DECIMAL(20, 8) NOT NULL DEFAULT 0,
-                consumed_volume DECIMAL(20, 8) NOT NULL DEFAULT 0,
-                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                price_bucket DOUBLE NOT NULL,
+                leverage_tier VARCHAR DEFAULT NULL,
+                side VARCHAR(10) DEFAULT NULL,
+                active_volume DOUBLE DEFAULT 0,
+                density INTEGER DEFAULT 0,
+                model VARCHAR DEFAULT 'binance_standard',
+                current_price DOUBLE DEFAULT NULL
             )
         """)
 
@@ -1095,7 +1097,6 @@ class DuckDBService:
     def save_snapshot(
         self,
         snapshot,  # HeatmapSnapshot from models.position
-        consumed_volume: Decimal = Decimal("0"),
     ) -> int:
         """Save a heatmap snapshot to the database.
 
@@ -1104,7 +1105,6 @@ class DuckDBService:
 
         Args:
             snapshot: HeatmapSnapshot with timestamp, symbol, and cells
-            consumed_volume: Total volume consumed (liquidated) this period
 
         Returns:
             Number of rows inserted
@@ -1133,10 +1133,10 @@ class DuckDBService:
                     self.conn.execute(
                         """
                         UPDATE liquidation_snapshots
-                        SET active_volume = ?, consumed_volume = ?
+                        SET active_volume = ?, density = 1
                         WHERE id = ?
                         """,
-                        [str(cell.long_density), str(consumed_volume), existing[0]],
+                        [float(cell.long_density), existing[0]],
                     )
                 else:
                     # Get next id and insert new row
@@ -1148,16 +1148,15 @@ class DuckDBService:
                     self.conn.execute(
                         """
                         INSERT INTO liquidation_snapshots
-                        (id, timestamp, symbol, price_bucket, side, active_volume, consumed_volume, created_at)
-                        VALUES (?, ?, ?, ?, 'long', ?, ?, CURRENT_TIMESTAMP)
+                        (id, timestamp, symbol, price_bucket, side, active_volume, density, model)
+                        VALUES (?, ?, ?, ?, 'long', ?, 1, 'binance_standard')
                         """,
                         [
                             next_id,
                             snapshot.timestamp,
                             snapshot.symbol,
-                            str(price_bucket),
-                            str(cell.long_density),
-                            str(consumed_volume),
+                            float(price_bucket),
+                            float(cell.long_density),
                         ],
                     )
                     rows_inserted += 1
@@ -1178,10 +1177,10 @@ class DuckDBService:
                     self.conn.execute(
                         """
                         UPDATE liquidation_snapshots
-                        SET active_volume = ?, consumed_volume = ?
+                        SET active_volume = ?, density = 1
                         WHERE id = ?
                         """,
-                        [str(cell.short_density), str(consumed_volume), existing[0]],
+                        [float(cell.short_density), existing[0]],
                     )
                 else:
                     # Get next id and insert new row
@@ -1193,16 +1192,15 @@ class DuckDBService:
                     self.conn.execute(
                         """
                         INSERT INTO liquidation_snapshots
-                        (id, timestamp, symbol, price_bucket, side, active_volume, consumed_volume, created_at)
-                        VALUES (?, ?, ?, ?, 'short', ?, ?, CURRENT_TIMESTAMP)
+                        (id, timestamp, symbol, price_bucket, side, active_volume, density, model)
+                        VALUES (?, ?, ?, ?, 'short', ?, 1, 'binance_standard')
                         """,
                         [
                             next_id,
                             snapshot.timestamp,
                             snapshot.symbol,
-                            str(price_bucket),
-                            str(cell.short_density),
-                            str(consumed_volume),
+                            float(price_bucket),
+                            float(cell.short_density),
                         ],
                     )
                     rows_inserted += 1
@@ -1245,8 +1243,7 @@ class DuckDBService:
                     symbol,
                     price_bucket,
                     side,
-                    active_volume,
-                    consumed_volume
+                    active_volume
                 FROM liquidation_snapshots
                 WHERE symbol = ?
                   AND timestamp >= ?
@@ -1262,13 +1259,12 @@ class DuckDBService:
             # Group by timestamp
             snapshots_by_ts = defaultdict(list)
             for row in result:
-                ts, sym, price_bucket, side, active_vol, consumed_vol = row
+                ts, _sym, price_bucket, side, active_vol = row
                 snapshots_by_ts[ts].append(
                     {
                         "price_bucket": price_bucket,
                         "side": side,
                         "active_volume": active_vol,
-                        "consumed_volume": consumed_vol,
                     }
                 )
 

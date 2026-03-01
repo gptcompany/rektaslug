@@ -64,16 +64,18 @@ class TestLiquidationSnapshotsSchema:
 
         column_names = [c[0] for c in columns]
 
-        # Required columns per data-model.md
+        # Required columns per production schema
         required_columns = [
             "id",
             "timestamp",
             "symbol",
             "price_bucket",
+            "leverage_tier",
             "side",
             "active_volume",
-            "consumed_volume",
-            "created_at",
+            "density",
+            "model",
+            "current_price",
         ]
 
         for col in required_columns:
@@ -93,9 +95,9 @@ class TestLiquidationSnapshotsSchema:
         db_service.conn.execute(
             """
             INSERT INTO liquidation_snapshots
-            (id, timestamp, symbol, price_bucket, side, active_volume, consumed_volume, created_at)
+            (id, timestamp, symbol, price_bucket, side, active_volume, density, model)
             VALUES
-            (?, TIMESTAMP '2025-12-01 00:00:00', 'BTCUSDT', 95000.00, 'long', 1000000.0, 0.0, CURRENT_TIMESTAMP)
+            (?, TIMESTAMP '2025-12-01 00:00:00', 'BTCUSDT', 95000.00, 'long', 1000000.0, 1, 'binance_standard')
         """,
             [next_id],
         )
