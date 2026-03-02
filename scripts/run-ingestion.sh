@@ -23,7 +23,7 @@ PROJECT_DIR="/media/sam/1TB/LiquidationHeatmap"
 DB_PATH="/media/sam/2TB-NVMe/liquidationheatmap_db/liquidations.duckdb"
 DATA_DIR="/media/sam/3TB-WDC/binance-history-data-downloader/data"
 CCXT_CATALOG="/media/sam/1TB/ccxt-data-pipeline/data/catalog"
-API_URL="${HEATMAP_API_URL:-http://localhost:8001}"
+API_URL="${HEATMAP_API_URL:-http://localhost:8002}"
 LOG_DIR="${PROJECT_DIR}/logs/ingestion"
 SYMBOLS="BTCUSDT ETHUSDT"
 

@@ -27,7 +27,7 @@ STAGE 1: GENERATE CACHE
           ▼ (if --validate)
 STAGE 2: VISUAL VALIDATION
   │
-  ├─► mcp__playwright__browser_navigate(localhost:8001/heatmap.html)
+  ├─► mcp__playwright__browser_navigate(localhost:8002/heatmap.html)
   ├─► mcp__playwright__browser_take_screenshot()
   ├─► Verify new data visible in heatmap
   └─► PASS | FAIL → retry
@@ -56,7 +56,7 @@ Task(
 Task(
     subagent_type="alpha-visual",
     prompt="""
-    Validate refreshed heatmap at http://localhost:8001/heatmap.html
+    Validate refreshed heatmap at http://localhost:8002/heatmap.html
 
     Check that new data is visible and no stale indicators.
     """

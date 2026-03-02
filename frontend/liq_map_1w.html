@@ -8,23 +8,9 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1 id="pageTitle">BTC Liquidation Map - 1 Week (Binance)</h1>
-    <p style="color: #8b949e; margin-top: -10px; margin-bottom: 10px; font-size: 0.9em;">
-        Validation view - compare with Coinank liq-map
-    </p>
-
-    <div style="background: #1f2937; padding: 12px; margin: 10px 0; border-left: 3px solid #f59e0b; border-radius: 4px;">
-        <strong style="color: #f59e0b;">&#x2139;&#xfe0f; Important:</strong>
-        <span style="color: #c9d1d9;"> Results reflect real whale positioning data. Asymmetric distributions (e.g., 100% short, 0% long) indicate one-sided institutional activity and are expected during trending markets.</span>
-    </div>
-
-    <div class="controls" style="display: flex; justify-content: flex-start; align-items: center; gap: 12px;">
-        <select id="symbolSelect" onchange="loadLevels()" style="padding: 8px 12px; background: #161b22; color: #c9d1d9; border: 1px solid #30363d; border-radius: 6px;">
-            <option value="BTCUSDT" selected>BTC/USDT</option>
-            <option value="ETHUSDT">ETH/USDT</option>
-        </select>
-        <span id="currentPrice" style="color: #f0b90b; font-weight: bold;"></span>
-    </div>
+    <h1 id="pageTitle"></h1>
+    <p id="lastDataPoint" style="color: #8b949e; margin-top: -10px; margin-bottom: 10px; font-size: 0.9em;"></p>
+    <span id="currentPrice" style="color: #f0b90b; font-weight: bold;"></span>
     <div id="liquidation-map" style="width: 100%; height: 600px;"></div>
 
     <script>
@@ -37,20 +23,27 @@
             '100x': '#ff6384'  // Pink/Red
         };
 
+        // Read symbol from URL path: /liq_map_1w/BTCUSDT or ?symbol=BTCUSDT
+        function getSymbol() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('symbol') || 'BTCUSDT';
+        }
+
         // Read chart mode from URL: ?chart=area or ?chart=bar (default: bar)
         const urlParams = new URLSearchParams(window.location.search);
         const CHART_MODE = urlParams.get('chart') || 'bar';
 
         async function loadLevels() {
-            const symbol = document.getElementById('symbolSelect').value;
-            const displaySymbol = symbol.replace('USDT', '');
+            const symbol = getSymbol();
+            const displaySymbol = symbol.replace('USDT', '/USDT');
             document.getElementById('pageTitle').textContent = `${displaySymbol} Liquidation Map - 1 Week (Binance)`;
+            document.title = `${displaySymbol} Liquidation Map - 1W (Binance)`;
 
             try {
                 const response = await fetch(`/liquidations/levels?symbol=${symbol}&model=openinterest&timeframe=7`);
                 const data = await response.json();
 
-                renderLiquidationMap(data);
+                renderLiquidationMap(data, symbol);
             } catch (error) {
                 console.error('Error loading levels:', error);
                 alert(`Error: ${error.message}`);
@@ -97,7 +90,6 @@
         function buildAreaTraces(longsByLeverage, shortsByLeverage, seenLeverages) {
             const traces = [];
 
-            // Helper: sort levels by price_level ascending and build area trace
             function addAreaTrace(levels, leverage, stackGroup, showInLegend) {
                 const sorted = [...levels].sort((a, b) => parseFloat(a.price_level) - parseFloat(b.price_level));
                 traces.push({
@@ -116,14 +108,12 @@
                 });
             }
 
-            // Long tiers stacked together
             Object.keys(longsByLeverage).sort().forEach(leverage => {
                 const showInLegend = !seenLeverages.has(leverage);
                 seenLeverages.add(leverage);
                 addAreaTrace(longsByLeverage[leverage], leverage, 'long', showInLegend);
             });
 
-            // Short tiers stacked together
             Object.keys(shortsByLeverage).sort().forEach(leverage => {
                 const showInLegend = !seenLeverages.has(leverage);
                 seenLeverages.add(leverage);
@@ -133,9 +123,15 @@
             return traces;
         }
 
-        function renderLiquidationMap(data) {
+        function renderLiquidationMap(data, symbol) {
             const currentPrice = parseFloat(data.current_price);
             document.getElementById('currentPrice').textContent = `Current Price: $${currentPrice.toLocaleString()}`;
+
+            // Show last data point timestamp
+            const lastTs = data.last_data_timestamp || new Date().toISOString();
+            const lastDate = new Date(lastTs);
+            document.getElementById('lastDataPoint').textContent =
+                `Last data: ${lastDate.toISOString().replace('T', ' ').substring(0, 19)} UTC`;
 
             // Group by leverage tier
             const longsByLeverage = groupByLeverage(data.long_liquidations);
@@ -151,7 +147,6 @@
             }
 
             // Calculate cumulative distributions (Coinglass style: start from current price)
-            // CRITICAL FIX: Remove duplicate prices using Set()
             const allPrices = [...new Set([
                 ...data.long_liquidations.map(l => parseFloat(l.price_level)),
                 ...data.short_liquidations.map(l => parseFloat(l.price_level))
@@ -167,10 +162,7 @@
                 type: 'scatter',
                 mode: 'lines',
                 name: 'Cumulative Long Liquidation Leverage',
-                line: {
-                    color: '#d9024b',  // Coinglass red
-                    width: 2
-                },
+                line: { color: '#d9024b', width: 2 },
                 yaxis: 'y2'
             });
 
@@ -181,10 +173,7 @@
                 type: 'scatter',
                 mode: 'lines',
                 name: 'Cumulative Short Liquidation Leverage',
-                line: {
-                    color: '#45bf87',  // Coinglass green
-                    width: 2
-                },
+                line: { color: '#45bf87', width: 2 },
                 yaxis: 'y2'
             });
 
@@ -201,22 +190,12 @@
                 type: 'scatter',
                 mode: 'lines',
                 name: `Current Price: ${currentPrice}`,
-                line: {
-                    color: '#ff0000',  // Red
-                    width: 2,
-                    dash: 'dash'
-                },
+                line: { color: '#ff0000', width: 2, dash: 'dash' },
                 hoverinfo: 'skip',
                 yaxis: 'y'
             });
 
-            const selectedSymbol = document.getElementById('symbolSelect').value;
-            const displayPair = selectedSymbol.replace('USDT', '/USDT');
             const layout = {
-                title: {
-                    text: `Binance ${displayPair} Perpetual - openinterest (7 day)`,
-                    font: { size: 16 }
-                },
                 xaxis: {
                     title: 'Price Level (USD)',
                     showgrid: true,
@@ -237,10 +216,8 @@
                 },
                 paper_bgcolor: '#0d1117',
                 plot_bgcolor: '#0d1117',
-                font: {
-                    color: '#c9d1d9'
-                },
-                barmode: 'stack',  // Stack bars for same price level (bar mode)
+                font: { color: '#c9d1d9' },
+                barmode: 'stack',
                 bargap: 0.1,
                 legend: {
                     orientation: 'h',
@@ -249,7 +226,8 @@
                     xanchor: 'right',
                     x: 1
                 },
-                hovermode: 'closest'
+                hovermode: 'closest',
+                margin: { t: 30 }
             };
 
             Plotly.newPlot('liquidation-map', traces, layout, {responsive: true});
@@ -268,42 +246,27 @@
         }
 
         function calculateCumulative(liquidations, allPrices, currentPrice, isLong = false) {
-            // Coinglass logic (from Gemini analysis):
-            // - SHORT (green): Standard cumulative from LEFT to RIGHT across ALL prices
-            //   cumulative_shorts[i] = sum(volumes[0..i])
-            // - LONG (red): Reverse cumulative from RIGHT to LEFT across ALL prices
-            //   cumulative_longs[i] = sum(volumes[i..N])
-
             const prices = [];
             const values = [];
-
-            // Sort ALL prices ascending (low to high)
             const sortedPrices = [...allPrices].sort((a, b) => a - b);
 
             if (isLong) {
-                // LONG: Reverse cumulative (starts high on left, decreases to right)
                 let cumulativeSum = 0;
-
-                // Calculate total first (iterate from right to left)
                 for (let i = sortedPrices.length - 1; i >= 0; i--) {
                     const price = sortedPrices[i];
                     const volumeAtPrice = liquidations
                         .filter(l => parseFloat(l.price_level) === price)
                         .reduce((sum, l) => sum + parseFloat(l.volume), 0);
-
                     cumulativeSum += volumeAtPrice;
-                    prices.unshift(price);  // Add to beginning
-                    values.unshift(cumulativeSum);  // Add to beginning
+                    prices.unshift(price);
+                    values.unshift(cumulativeSum);
                 }
             } else {
-                // SHORT: Standard cumulative (starts low on left, increases to right)
                 let cumulativeSum = 0;
-
                 sortedPrices.forEach(price => {
                     const volumeAtPrice = liquidations
                         .filter(l => parseFloat(l.price_level) === price)
                         .reduce((sum, l) => sum + parseFloat(l.volume), 0);
-
                     cumulativeSum += volumeAtPrice;
                     prices.push(price);
                     values.push(cumulativeSum);

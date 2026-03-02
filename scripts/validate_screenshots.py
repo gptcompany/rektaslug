@@ -79,8 +79,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--api-url",
         type=str,
-        default=os.environ.get("HEATMAP_API_URL", "http://localhost:8001"),
-        help="Heatmap API base URL (default: http://localhost:8001, override with HEATMAP_API_URL)",
+        default=os.environ.get("HEATMAP_API_URL", "http://localhost:8002"),
+        help="Heatmap API base URL (default: http://localhost:8002, override with HEATMAP_API_URL)",
     )
 
     parser.add_argument(

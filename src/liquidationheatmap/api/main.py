@@ -335,8 +335,24 @@ async def heatmap_30d_page():
 
 @app.get("/liq_map_1w.html")
 async def liq_map_1w_page():
-    """Serve the 1-week liquidation map validation page."""
+    """Serve the 1-week liquidation map (default: BTCUSDT)."""
     return FileResponse("frontend/liq_map_1w.html")
+
+
+@app.get("/liq_map_1w/{symbol}")
+async def liq_map_1w_symbol(symbol: str):
+    """Legacy route - redirects to Coinank-style path."""
+    from fastapi.responses import RedirectResponse
+
+    return RedirectResponse(url=f"/chart/derivatives/liq-map/binance/{symbol.lower()}/1w")
+
+
+@app.get("/chart/derivatives/liq-map/binance/{symbol}/{timeframe}")
+async def liq_map_coinank_style(symbol: str, timeframe: str):
+    """Coinank-style liq-map route: /chart/derivatives/liq-map/binance/btcusdt/1w"""
+    from fastapi.responses import RedirectResponse
+
+    return RedirectResponse(url=f"/liq_map_1w.html?symbol={symbol.upper()}")
 
 
 class LiquidationResponse(BaseModel):

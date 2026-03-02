@@ -117,7 +117,7 @@ class PriceLevelValidation:
 
 def fetch_our_heatmap_data(symbol: str = "BTCUSDT", time_window: str = "48h") -> dict:
     """Fetch our heatmap data from local API."""
-    api_base = os.environ.get("HEATMAP_API_URL", "http://localhost:8001")
+    api_base = os.environ.get("HEATMAP_API_URL", "http://localhost:8002")
     url = f"{api_base}/liquidations/heatmap-timeseries?symbol={symbol}&time_window={time_window}"
     try:
         with urllib.request.urlopen(url, timeout=60) as resp:

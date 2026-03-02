@@ -21,7 +21,7 @@ Validate FastAPI server, DuckDB connection, and heatmap visualization.
 ┌──────────────────────────────────────────────────────────┐
 │  INITIALIZATION                                          │
 │  ─────────────────────────────────────────────────────── │
-│  1. Check if server running (curl localhost:8001/health)  │
+│  1. Check if server running (curl localhost:8002/health)  │
 │  2. If --start-server: uv run uvicorn api.main:app       │
 │  3. Verify DuckDB file exists and readable               │
 └──────────────────────────────────────────────────────────┘
@@ -31,7 +31,7 @@ Validate FastAPI server, DuckDB connection, and heatmap visualization.
 │  COMPONENT CHECKS (parallel)                             │
 │  ─────────────────────────────────────────────────────── │
 │  API Health:                                             │
-│    curl http://localhost:8001/health                     │
+│    curl http://localhost:8002/health                     │
 │                                                          │
 │  Data Freshness:                                         │
 │    Query DuckDB directly for latest timestamp            │
@@ -62,7 +62,7 @@ Task(
     prompt="""
     Verify LiquidationHeatmap system health:
 
-    1. Check API: curl http://localhost:8001/health
+    1. Check API: curl http://localhost:8002/health
     2. Check DB: Test DuckDB connection at
        /media/sam/2TB-NVMe/liquidationheatmap_db/liquidations.duckdb
     3. Query latest timestamp from DuckDB
@@ -84,7 +84,7 @@ Task(
     - mcp__chrome-devtools__list_console_messages
 
     Check:
-    1. http://localhost:8001/heatmap.html loads
+    1. http://localhost:8002/heatmap.html loads
     2. Plotly chart renders
     3. No JS errors in console
     4. Data populates (not empty/loading state)

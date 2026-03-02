@@ -9,13 +9,19 @@ Validate our liquidation map (`/liquidations/levels`) against Coinank `liq-map` 
 
 ## Repo Context
 
-- **Local page**: `http://localhost:8001/liq_map_1w.html`
-- **Frontend source**: `frontend/liq_map_1w.html`
+- **Local BTC page**: `http://localhost:8002/chart/derivatives/liq-map/binance/btcusdt/1w`
+- **Local ETH page**: `http://localhost:8002/chart/derivatives/liq-map/binance/ethusdt/1w`
+- **Frontend source**: `frontend/liq_map_1w.html` (reads `?symbol=` from query string)
 - **Pipeline script**: `scripts/validate_liqmap_visual.py`
 - **Coinank reference dependency**: `scripts/coinank_screenshot.py --product map`
 - **Output directory**: `data/validation/liqmap/`
 - **Manifest directory**: `data/validation/manifests/`
 - **API endpoint**: `/liquidations/levels?symbol=BTCUSDT&model=openinterest&timeframe=7`
+
+## Coinank Reference URLs
+
+- **BTC liq-map 1w**: `https://coinank.com/chart/derivatives/liq-map/binance/btcusdt/1w`
+- **ETH liq-map 1w**: `https://coinank.com/chart/derivatives/liq-map/binance/ethusdt/1w`
 
 ## Orchestration Flow
 
