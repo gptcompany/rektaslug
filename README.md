@@ -1,11 +1,15 @@
 # LiquidationHeatmap
 
-![CI](https://github.com/gptcompany/liquidations/actions/workflows/ci.yml/badge.svg?branch=master)
-![TechDocs](https://github.com/gptcompany/liquidations/actions/workflows/techdocs.yml/badge.svg?branch=master)
-![Validation](https://github.com/gptcompany/liquidations/actions/workflows/validation.yml/badge.svg?branch=master)
+<p align="center">
+  <img src="logo.png" alt="LiquidationHeatmap Logo" width="200">
+</p>
+
+![CI](https://github.com/gptcompany/rektaslug/actions/workflows/ci.yml/badge.svg?branch=master)
+![TechDocs](https://github.com/gptcompany/rektaslug/actions/workflows/techdocs.yml/badge.svg?branch=master)
+![Validation](https://github.com/gptcompany/rektaslug/actions/workflows/validation.yml/badge.svg?branch=master)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square&logo=python)
-![Issues](https://img.shields.io/github/issues/gptcompany/liquidations?style=flat-square)
-![Last Commit](https://img.shields.io/github/last-commit/gptcompany/liquidations?style=flat-square)
+![Issues](https://img.shields.io/github/issues/gptcompany/rektaslug?style=flat-square)
+![Last Commit](https://img.shields.io/github/last-commit/gptcompany/rektaslug?style=flat-square)
 
 Calculate and visualize cryptocurrency liquidation levels from Binance futures data using DuckDB analytics and FastAPI REST endpoints. Leverages open-source models (py-liquidation-map) for battle-tested algorithms.
 
@@ -113,7 +117,7 @@ All pairs use Binance USDT-M perpetual liquidation formulas. The pipeline is ful
 
 ```bash
 # Clone repository
-git clone https://github.com/gptcompany/liquidations.git
+git clone https://github.com/gptcompany/rektaslug.git
 cd liquidations
 
 # Install dependencies
