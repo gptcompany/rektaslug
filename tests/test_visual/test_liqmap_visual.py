@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from threading import Thread
@@ -109,7 +110,9 @@ def test_validate_liqmap_cli_args_defaults():
     assert args.coin == "BTC"
     assert args.exchange == "binance"
     assert args.coinank_timeframe == "1w"
-    assert args.chart_mode == "area"
+    assert args.chart_mode == "bar"
+    assert args.max_freshness_minutes == 5
+    assert args.allow_stale_data is False
 
 
 # --- Step 2: fetch_liqmap_payload tests ---
@@ -289,14 +292,15 @@ class _FreshnessHandler(BaseHTTPRequestHandler):
 
 
 def test_fetch_data_freshness_returns_fields(free_port):
-    """fetch_data_freshness should return end_date, age_hours."""
+    """fetch_data_freshness should return fresh-state fields for recent data."""
     from validate_liqmap_visual import fetch_data_freshness
 
+    recent_end = (datetime.now(timezone.utc) - timedelta(minutes=2)).isoformat()
     canned = json.dumps(
         {
             "symbol": "BTCUSDT",
             "start_date": "2025-01-01T00:00:00",
-            "end_date": "2026-02-27T12:00:00",
+            "end_date": recent_end,
         }
     )
     _FreshnessHandler.date_range_body = canned
@@ -310,7 +314,40 @@ def test_fetch_data_freshness_returns_fields(free_port):
         )
         assert "end_date" in result
         assert "age_hours" in result
+        assert "age_minutes" in result
         assert isinstance(result["age_hours"], float)
+        assert isinstance(result["age_minutes"], float)
+        assert result["stale"] is False
+        assert "warning" not in result
+    finally:
+        server.shutdown()
+
+
+def test_fetch_data_freshness_marks_stale_when_over_threshold(free_port):
+    """fetch_data_freshness should mark stale payloads when older than the threshold."""
+    from validate_liqmap_visual import fetch_data_freshness
+
+    stale_end = (datetime.now(timezone.utc) - timedelta(minutes=9)).isoformat()
+    canned = json.dumps(
+        {
+            "symbol": "BTCUSDT",
+            "start_date": "2025-01-01T00:00:00",
+            "end_date": stale_end,
+        }
+    )
+    _FreshnessHandler.date_range_body = canned
+    server = HTTPServer(("127.0.0.1", free_port), _FreshnessHandler)
+    t = Thread(target=server.serve_forever, daemon=True)
+    t.start()
+    try:
+        result = fetch_data_freshness(
+            api_base=f"http://127.0.0.1:{free_port}",
+            symbol="BTCUSDT",
+            max_age_minutes=5,
+        )
+        assert result["stale"] is True
+        assert "warning" in result
+        assert result["max_age_minutes"] == 5
     finally:
         server.shutdown()
 

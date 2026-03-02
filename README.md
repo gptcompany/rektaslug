@@ -1,10 +1,11 @@
 # LiquidationHeatmap
 
 <p align="center">
-  <img src="logo.png" alt="LiquidationHeatmap Logo" width="200">
+  <img src="docs/assets/rektaslug-logo.svg" alt="rektaslug logo" width="320">
 </p>
 
 ![CI](https://github.com/gptcompany/rektaslug/actions/workflows/ci.yml/badge.svg?branch=master)
+![Core Deploy](https://github.com/gptcompany/rektaslug/actions/workflows/core-deploy.yml/badge.svg?branch=master)
 ![TechDocs](https://github.com/gptcompany/rektaslug/actions/workflows/techdocs.yml/badge.svg?branch=master)
 ![Validation](https://github.com/gptcompany/rektaslug/actions/workflows/validation.yml/badge.svg?branch=master)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square&logo=python)
@@ -14,6 +15,31 @@
 Calculate and visualize cryptocurrency liquidation levels from Binance futures data using DuckDB analytics and FastAPI REST endpoints. Leverages open-source models (py-liquidation-map) for battle-tested algorithms.
 
 Primary runtime configuration is now centralized in `src/liquidationheatmap/settings.py`, with shell wrappers loading the same environment contract through `scripts/lib/runtime_env.sh`. Environment overrides are documented in `.env.example`.
+
+`rektslug` is the core production service: it owns the dashboard endpoints and the feature API surface that downstream trading systems (including NT Trader) should consume. The upstream `ccxt-data-pipeline` remains an external collector; `rektslug` is responsible for syncing that upstream data into its local DuckDB state and serving stable API contracts.
+
+## Production Core Runtime
+
+The production baseline now lives in this repo:
+
+- `rektslug-api`: FastAPI core service
+- `rektslug-sync`: near-real-time Parquet -> DuckDB gap-fill worker (5 minute loop by default)
+
+Start the core runtime:
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+docker compose ps
+```
+
+Refresh or deploy an existing checkout:
+
+```bash
+bash scripts/deploy-core.sh
+```
+
+The `Core Deploy` GitHub Action builds and publishes the core image automatically whenever core code changes on `master`. If the deployment secrets are configured, the same workflow also performs a remote `docker compose pull && up -d` for the production stack.
 
 ## Quick Start
 
@@ -37,7 +63,7 @@ uv run python scripts/ingest_aggtrades.py \
 # Validate data quality (after ingestion)
 uv run python scripts/validate_aggtrades.py
 
-# Run FastAPI server
+# Run FastAPI server (development)
 uv run uvicorn src.liquidationheatmap.api.main:app --host ${HEATMAP_HOST:-0.0.0.0} --port ${HEATMAP_PORT:-8002}
 
 # Open active chart route (phase 1)
@@ -118,7 +144,7 @@ All pairs use Binance USDT-M perpetual liquidation formulas. The pipeline is ful
 ```bash
 # Clone repository
 git clone https://github.com/gptcompany/rektaslug.git
-cd liquidations
+cd rektaslug
 
 # Install dependencies
 uv sync

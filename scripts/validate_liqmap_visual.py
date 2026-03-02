@@ -182,10 +182,11 @@ def compute_validation_metrics(payload: dict[str, Any] | None) -> dict[str, Any]
 def fetch_data_freshness(
     api_base: str,
     symbol: str = "BTCUSDT",
+    max_age_minutes: int = 5,
 ) -> dict[str, Any]:
     """Check data freshness via /data/date-range endpoint.
 
-    Returns dict with end_date, age_hours, and optional warning.
+    Returns dict with end_date, age_hours, age_minutes, and optional warning.
     """
     url = f"{api_base}/data/date-range?symbol={symbol}"
     try:
@@ -202,16 +203,25 @@ def fetch_data_freshness(
         if end_dt.tzinfo is None:
             end_dt = end_dt.replace(tzinfo=timezone.utc)
         now = datetime.now(timezone.utc)
-        age_hours = (now - end_dt).total_seconds() / 3600.0
+        age_seconds = (now - end_dt).total_seconds()
+        age_hours = age_seconds / 3600.0
+        age_minutes = age_seconds / 60.0
     except Exception as exc:
         return {"error": f"failed to parse end_date: {exc}", "end_date": end_date_str}
 
     result: dict[str, Any] = {
         "end_date": end_date_str,
         "age_hours": round(age_hours, 2),
+        "age_minutes": round(age_minutes, 2),
+        "max_age_minutes": max_age_minutes,
     }
-    if age_hours > 24:
-        result["warning"] = f"Data is {age_hours:.1f}h old (>24h threshold)"
+    if age_minutes > max_age_minutes:
+        result["stale"] = True
+        result["warning"] = (
+            f"Data is {age_minutes:.1f}m old (>{max_age_minutes}m threshold)"
+        )
+    else:
+        result["stale"] = False
     return result
 
 
@@ -417,6 +427,17 @@ def parse_args() -> argparse.Namespace:
         choices=["area", "bar"],
         help="Chart rendering mode for local screenshot (default: bar)",
     )
+    parser.add_argument(
+        "--max-freshness-minutes",
+        type=int,
+        default=5,
+        help="Maximum allowed data staleness before validation aborts (default: 5)",
+    )
+    parser.add_argument(
+        "--allow-stale-data",
+        action="store_true",
+        help="Allow validation to continue even when the freshness gate fails",
+    )
     return parser.parse_args()
 
 
@@ -486,7 +507,14 @@ def main() -> int:
         data_freshness = fetch_data_freshness(
             api_base=api_base,
             symbol=args.symbol,
+            max_age_minutes=args.max_freshness_minutes,
         )
+        if data_freshness.get("stale") and not args.allow_stale_data:
+            raise RuntimeError(
+                f"data freshness gate failed: {data_freshness['warning']}. "
+                "Run scripts/fill_gap_from_ccxt.py (or the ccxt gap-fill timer) before validating, "
+                "or pass --allow-stale-data to bypass."
+            )
 
         local_state = asyncio.run(
             capture_local_liqmap_page(

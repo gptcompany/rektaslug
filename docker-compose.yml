@@ -1,0 +1,73 @@
+name: rektslug
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-deploy-service: &default-deploy
+  resources:
+    limits:
+      memory: 1g
+
+x-core-service: &default-core-service
+  image: ${REKTSLUG_CORE_IMAGE:-ghcr.io/gptcompany/rektaslug-core:latest}
+  build:
+    context: .
+    dockerfile: Dockerfile
+  init: true
+  env_file: .env
+  environment:
+    HEATMAP_PROJECT_ROOT: /app
+    HEATMAP_HOST: 0.0.0.0
+    HEATMAP_PORT: 8002
+    HEATMAP_API_URL: http://rektslug-api:8002
+    HEATMAP_DB_PATH: /var/lib/rektslug-db/liquidations.duckdb
+    HEATMAP_CCXT_CATALOG: /var/lib/rektslug-ccxt
+    REKTSLUG_GAP_FILL_INTERVAL_SECONDS: ${REKTSLUG_GAP_FILL_INTERVAL_SECONDS:-300}
+  volumes:
+    - ${REKTSLUG_DB_DIR:-/media/sam/2TB-NVMe/liquidationheatmap_db}:/var/lib/rektslug-db
+    - ${HEATMAP_CCXT_CATALOG:-/media/sam/1TB/ccxt-data-pipeline/data/catalog}:/var/lib/rektslug-ccxt:ro
+  restart: unless-stopped
+  logging: *default-logging
+  deploy: *default-deploy
+  stop_grace_period: 10s
+
+services:
+  rektslug-api:
+    <<: *default-core-service
+    container_name: rektslug-api
+    command:
+      - uv
+      - run
+      - uvicorn
+      - src.liquidationheatmap.api.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8002"
+    ports:
+      - "${HEATMAP_PORT:-8002}:8002"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/health', timeout=5)",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  rektslug-sync:
+    <<: *default-core-service
+    container_name: rektslug-sync
+    command:
+      - /bin/bash
+      - /app/scripts/run-gapfill-daemon.sh
+    depends_on:
+      rektslug-api:
+        condition: service_healthy

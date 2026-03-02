@@ -68,6 +68,7 @@ title: 'Cumulative Liquidation Leverage',  // ELIMINARE
 
 // Nascondere H1 e metadata:
 document.getElementById('pageTitle').style.display = 'none';  // o display:none in HTML
+document.getElementById('currentPrice').style.display = 'none';  // evita label duplicata fuori chart
 ```
 
 ### Step 3: 3 Leverage Groups (T2-02..04)
@@ -131,6 +132,8 @@ annotations: [{
 ```
 
 Rimuovere il current price dalla trace scatter esistente e dalla legend.
+Importante: il prezzo corrente NON deve rimanere anche nel DOM fuori dal grafico
+(`id="currentPrice"`), altrimenti resta un doppione non presente in Coinank.
 
 ### Step 6: Legend 3 items centered (T2-17..18)
 
@@ -163,11 +166,20 @@ xaxis: {
 
 ## Validazione
 
-### Pre-requisito: Freshness dati (< 5 minuti)
+### Pre-requisito: Freshness dati (< 5 minuti, gate operativo)
 
 Prima di OGNI validazione, i dati DuckDB devono essere aggiornati agli ultimi 5 minuti.
 Senza questo, le discrepanze di volume/price range rispetto a Coinank (che usa dati live)
 sono inevitabili e falsano il TIER 3.
+
+Nota importante: questo vincolo e oggi un requisito di processo, NON un blocco automatico
+di `scripts/validate_liqmap_visual.py`. Il validator attuale segnala solo staleness molto piu
+ampia (>24h), quindi la verifica "< 5 min" va confermata manualmente prima del confronto.
+
+Nota architetturale: `ccxt-data-pipeline` e una sorgente upstream che mantiene aggiornato il
+catalogo Parquet. Non scrive direttamente in DuckDB. Il passaggio Parquet -> DuckDB avviene
+tramite `scripts/fill_gap_from_ccxt.py` (o fase 6 di `scripts/run-ingestion.sh`), quindi la
+freshness in DuckDB dipende anche da quel bridge, non solo dal daemon upstream.
 
 ```bash
 # 1. Eseguire ingestion aggiornata
@@ -180,6 +192,14 @@ curl -s http://localhost:8002/data/date-range?symbol=BTCUSDT | python -m json.to
 
 # 3. Rigenerare cache heatmap/levels se necessario
 # /refresh-heatmap --symbol BTCUSDT --validate
+```
+
+Se serve un refresh ravvicinato prima della validazione visuale, eseguire anche il bridge
+dal catalogo ccxt verso DuckDB:
+
+```bash
+dotenvx run -f /media/sam/1TB/.env -- \
+  uv run python scripts/fill_gap_from_ccxt.py --symbols BTCUSDT ETHUSDT
 ```
 
 ### Dopo ogni step, verificare visivamente:

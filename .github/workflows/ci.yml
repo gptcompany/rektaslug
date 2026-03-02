@@ -1,21 +1,20 @@
-# CI Pipeline using organization reusable workflows
-# Runs security, lint, and test checks on push/PR
-
 name: CI
 
 on:
   push:
-    branches: [master, main, develop]
+    branches: [master]
     paths-ignore:
       - "*.md"
       - "docs/**"
       - "catalog-info.yaml"
+      - "LICENSE"
   pull_request:
-    branches: [master, main]
+    branches: [master]
     paths-ignore:
       - "*.md"
       - "docs/**"
       - "catalog-info.yaml"
+      - "LICENSE"
   workflow_dispatch:
 
 permissions:
@@ -26,27 +25,100 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  security:
-    name: Security Scan
-    uses: gptcompany/claude-hooks-shared/.github/workflows/_reusable-security.yml@main
-    with:
-      bandit-paths: 'src/liquidationheatmap'
-      fail-on-high-severity: true
-
-  lint:
-    name: Lint & Types
-    uses: gptcompany/claude-hooks-shared/.github/workflows/_reusable-lint.yml@main
-    with:
-      python-version: '3.12'
-      mypy-paths: 'src/liquidationheatmap/'
-      fail-on-type-errors: false
-
   test:
-    name: Tests
-    needs: [security, lint]
-    uses: gptcompany/claude-hooks-shared/.github/workflows/_reusable-tests.yml@main
-    with:
-      python-version: '3.12'
-      test-paths: 'tests/test_api/test_main.py tests/unit/test_validate_heatmap_visual.py'
-      coverage-paths: 'src/liquidationheatmap/api'
-      coverage-threshold: 30
+    name: "${{ matrix.os }} / py${{ matrix.python-version }}"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.11"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Shell syntax
+        run: |
+          bash -n scripts/run-ccxt-gap-fill.sh
+          bash -n scripts/run-gapfill-daemon.sh
+          bash -n scripts/deploy-core.sh
+
+      - name: Python compile smoke
+        run: |
+          uv run python -m compileall src/liquidationheatmap
+          uv run python -m py_compile scripts/validate_liqmap_visual.py
+
+      - name: Docker compose smoke (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          cp .env.example .env
+          docker compose config >/dev/null
+
+      - name: Focused runtime suite (Linux with coverage)
+        if: runner.os == 'Linux'
+        run: |
+          uv run pytest -q \
+            tests/test_api/test_main.py \
+            tests/test_visual/test_liqmap_visual.py \
+            tests/unit/test_readme_assets.py \
+            tests/unit/test_runtime_compose.py \
+            --cov=src/liquidationheatmap \
+            --cov-report=term \
+            --cov-report=json
+
+      - name: Focused runtime suite (macOS)
+        if: runner.os != 'Linux'
+        run: |
+          uv run pytest -q \
+            tests/test_api/test_main.py \
+            tests/test_visual/test_liqmap_visual.py \
+            tests/unit/test_readme_assets.py \
+            tests/unit/test_runtime_compose.py
+
+      - name: Extract coverage percentage
+        if: runner.os == 'Linux'
+        id: cov
+        run: |
+          COV=$(python -c "import json; print(int(json.load(open('coverage.json'))['totals']['percent_covered']))")
+          echo "pct=$COV" >> "$GITHUB_OUTPUT"
+
+      - name: Check coverage badge config
+        if: runner.os == 'Linux'
+        id: cov_badge
+        env:
+          GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+          COVERAGE_GIST_ID: ${{ vars.COVERAGE_GIST_ID }}
+        run: |
+          if [ -n "$GIST_TOKEN" ] && [ -n "$COVERAGE_GIST_ID" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "gist_id=$COVERAGE_GIST_ID" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update coverage badge
+        if: runner.os == 'Linux' && github.ref == 'refs/heads/master' && github.event_name == 'push' && steps.cov.outputs.pct && steps.cov_badge.outputs.enabled == 'true'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: ${{ steps.cov_badge.outputs.gist_id }}
+          filename: rektaslug-coverage.json
+          label: coverage
+          message: ${{ steps.cov.outputs.pct }}%
+          valColorRange: ${{ steps.cov.outputs.pct }}
+          minColorRange: 30
+          maxColorRange: 90

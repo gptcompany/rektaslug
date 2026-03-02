@@ -38,6 +38,7 @@ tests/integration/screenshots/
 # Logs
 test_output.log
 logs/
+logo.png
 elementi.png
 
 # Validation artifacts

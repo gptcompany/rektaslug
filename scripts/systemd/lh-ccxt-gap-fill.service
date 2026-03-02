@@ -1,0 +1,21 @@
+[Unit]
+Description=LiquidationHeatmap ccxt Parquet to DuckDB Gap Fill
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=sam
+Group=sam
+WorkingDirectory=/media/sam/1TB/LiquidationHeatmap
+EnvironmentFile=-/media/sam/1TB/LiquidationHeatmap/.env
+Environment=PATH=/home/sam/.local/bin:/home/sam/.cargo/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/media/sam/1TB/monitoring-stack/scripts/cron-wrapper.sh lh-ccxt-gap-fill /media/sam/1TB/LiquidationHeatmap/scripts/run-ccxt-gap-fill.sh
+TimeoutStartSec=300
+Restart=no
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=lh-ccxt-gap-fill
+
+[Install]
+WantedBy=multi-user.target
