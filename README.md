@@ -1,7 +1,7 @@
 # LiquidationHeatmap
 
 <p align="center">
-  <img src="logo.png" alt="rektaslug logo" width="320">
+  <img src="logo.png" alt="rektaslug logo" width="500">
 </p>
 
 ![CI](https://github.com/gptcompany/rektaslug/actions/workflows/ci.yml/badge.svg?branch=master)
