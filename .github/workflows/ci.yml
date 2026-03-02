@@ -5,10 +5,25 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [master, main, develop]
+    paths-ignore:
+      - "*.md"
+      - "docs/**"
+      - "catalog-info.yaml"
   pull_request:
-    branches: [main]
+    branches: [master, main]
+    paths-ignore:
+      - "*.md"
+      - "docs/**"
+      - "catalog-info.yaml"
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   security:

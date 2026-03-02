@@ -22,17 +22,24 @@ import argparse
 import asyncio
 import json
 import logging
-import os
+import sys
 import urllib.request
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from src.liquidationheatmap.settings import get_settings
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 logger = logging.getLogger(__name__)
+_SETTINGS = get_settings()
 
 # Results storage
 RESULTS_DIR = Path("data/validation")
@@ -117,7 +124,7 @@ class PriceLevelValidation:
 
 def fetch_our_heatmap_data(symbol: str = "BTCUSDT", time_window: str = "48h") -> dict:
     """Fetch our heatmap data from local API."""
-    api_base = os.environ.get("HEATMAP_API_URL", "http://localhost:8002")
+    api_base = _SETTINGS.api_url
     url = f"{api_base}/liquidations/heatmap-timeseries?symbol={symbol}&time_window={time_window}"
     try:
         with urllib.request.urlopen(url, timeout=60) as resp:

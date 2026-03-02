@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Comparison - Liquidation Heatmap</title>
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .model-panel {
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 15px;
+        }
+        .metrics-table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+        .metrics-table th, .metrics-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #30363d;
+        }
+        .agreement {
+            font-size: 1.5em;
+            text-align: center;
+            margin: 20px 0;
+            color: #58a6ff;
+        }
+    </style>
+</head>
+<body>
+    <h1>Liquidation Model Comparison</h1>
+    <button onclick="loadComparison()" class="button">Compare All Models</button>
+    <div id="agreement" class="agreement"></div>
+    <div class="comparison-grid" id="charts"></div>
+    <div id="metrics"></div>
+
+    <script>
+        async function loadComparison() {
+            try {
+                const response = await fetch('/liquidations/compare-models?symbol=BTCUSDT');
+                const data = await response.json();
+
+                displayAgreement(data.agreement_percentage);
+                renderCharts(data);
+                displayMetrics(data);
+            } catch (error) {
+                console.error('Error loading comparison:', error);
+                document.getElementById('agreement').innerHTML = `<p class="error">Error: ${error.message}</p>`;
+            }
+        }
+
+        function displayAgreement(percentage) {
+            const color = percentage > 80 ? '#45bf87' : percentage > 50 ? '#f0b90b' : '#d9024b';
+            document.getElementById('agreement').innerHTML = `
+                <div style="color: ${color}">
+                    Model Agreement: ${percentage.toFixed(1)}%
+                </div>
+            `;
+        }
+
+        function renderCharts(data) {
+            const chartsDiv = document.getElementById('charts');
+            chartsDiv.innerHTML = '';
+
+            data.models.forEach(model => {
+                const panel = document.createElement('div');
+                panel.className = 'model-panel';
+                panel.id = `chart-${model.name}`;
+                chartsDiv.appendChild(panel);
+
+                renderModelChart(model, panel.id);
+            });
+        }
+
+        function renderModelChart(model, divId) {
+            if (!model.levels || model.levels.length === 0) {
+                document.getElementById(divId).innerHTML = `<h3>${model.name}</h3><p>No data available</p>`;
+                return;
+            }
+
+            const longLevels = model.levels.filter(l => l.side === 'long');
+            const shortLevels = model.levels.filter(l => l.side === 'short');
+
+            const longTrace = {
+                x: longLevels.map(l => parseFloat(l.price_level)),
+                y: longLevels.map(l => parseFloat(l.volume)),
+                type: 'bar',
+                name: 'Long',
+                marker: { color: '#d9024b' }
+            };
+
+            const shortTrace = {
+                x: shortLevels.map(l => parseFloat(l.price_level)),
+                y: shortLevels.map(l => parseFloat(l.volume)),
+                type: 'bar',
+                name: 'Short',
+                marker: { color: '#45bf87' }
+            };
+
+            const layout = {
+                title: `${model.name} (conf: ${model.avg_confidence.toFixed(2)})`,
+                xaxis: { title: 'Price (USDT)' },
+                yaxis: { title: 'Volume' },
+                plot_bgcolor: '#0d1117',
+                paper_bgcolor: '#0d1117',
+                font: { color: '#c9d1d9' },
+                showlegend: true
+            };
+
+            Plotly.newPlot(divId, [longTrace, shortTrace], layout, {responsive: true});
+        }
+
+        function displayMetrics(data) {
+            const metricsDiv = document.getElementById('metrics');
+            let tableHTML = `
+                <h2>Model Metrics</h2>
+                <table class="metrics-table">
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Avg Confidence</th>
+                            <th>Total Levels</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            data.models.forEach(model => {
+                tableHTML += `
+                    <tr>
+                        <td>${model.name}</td>
+                        <td>${model.avg_confidence.toFixed(3)}</td>
+                        <td>${model.levels.length}</td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+
+            metricsDiv.innerHTML = tableHTML;
+        }
+
+        // Auto-load on page load
+        window.onload = loadComparison;
+    </script>
+</body>
+</html>

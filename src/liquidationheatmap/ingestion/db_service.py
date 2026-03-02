@@ -9,6 +9,7 @@ from urllib.request import urlopen
 
 import duckdb
 
+from ..settings import get_settings
 from .csv_loader import load_csv_glob, load_funding_rate_csv
 
 logger = logging.getLogger(__name__)
@@ -186,7 +187,7 @@ class DuckDBService:
             logger.error(f"Failed to release ingestion lock: {e}")
             return False
 
-    def __new__(cls, db_path: str = "/media/sam/2TB-NVMe/liquidationheatmap_db/liquidations.duckdb", read_only: bool = False):
+    def __new__(cls, db_path: str | None = None, read_only: bool = False):
         """Singleton pattern per (db_path, read_only) - reuse existing connection.
 
         Thread-safe: Uses lock for concurrent singleton creation.
@@ -196,6 +197,8 @@ class DuckDBService:
             db_path: Path to DuckDB database file
             read_only: If True, open in read-only mode (faster for queries)
         """
+        if db_path is None:
+            db_path = str(get_settings().db_path)
         resolved_path = str(Path(db_path).resolve())
         key = (resolved_path, read_only)
 

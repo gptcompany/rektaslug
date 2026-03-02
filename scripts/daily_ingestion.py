@@ -14,28 +14,27 @@ Usage:
 
 import argparse
 import logging
-import os
 import subprocess
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from src.liquidationheatmap.settings import get_settings
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# Configuration (overridable via env vars)
-PROJECT_ROOT = Path(os.environ.get("HEATMAP_PROJECT_ROOT", "/media/sam/1TB/LiquidationHeatmap"))
-DATA_DIR = Path(
-    os.environ.get(
-        "HEATMAP_DATA_DIR", "/media/sam/3TB-WDC/binance-history-data-downloader/data"
-    )
-)
-DB_PATH = Path(
-    os.environ.get(
-        "HEATMAP_DB_PATH", "/media/sam/2TB-NVMe/liquidationheatmap_db/liquidations.duckdb"
-    )
-)
-DEFAULT_SYMBOLS = os.environ.get("HEATMAP_SYMBOLS", "BTCUSDT,ETHUSDT").split(",")
+_SETTINGS = get_settings()
+
+# Configuration (centralized via src.liquidationheatmap.settings)
+PROJECT_ROOT = _SETTINGS.project_root
+DATA_DIR = _SETTINGS.data_dir
+DB_PATH = _SETTINGS.db_path
+DEFAULT_SYMBOLS = list(_SETTINGS.symbols)
 
 
 def run_script(script_name: str, args: list) -> bool:

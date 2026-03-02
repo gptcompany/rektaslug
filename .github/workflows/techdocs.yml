@@ -6,17 +6,26 @@ name: TechDocs
 
 on:
   push:
-    branches: [main]
+    branches: [master, main]
     paths:
       - 'docs/**'
       - 'mkdocs.yml'
       - 'ARCHITECTURE.md'
       - 'README.md'
   pull_request:
-    branches: [main]
+    branches: [master, main]
     paths:
       - 'docs/**'
       - 'mkdocs.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: techdocs-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -36,25 +45,22 @@ jobs:
       - name: Build docs
         run: mkdocs build --strict
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: techdocs-site
-          path: site/
-          retention-days: 7
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
 
-  # Optional: Deploy to GitHub Pages
-  # Uncomment if using GitHub Pages for docs
-  # deploy:
-  #   needs: build
-  #   if: github.ref == 'refs/heads/main'
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     pages: write
-  #     id-token: write
-  #   environment:
-  #     name: github-pages
-  #     url: ${{ steps.deployment.outputs.page_url }}
-  #   steps:
-  #     - uses: actions/deploy-pages@v4
-  #       id: deployment
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/
+
+  deploy:
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

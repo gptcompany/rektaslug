@@ -2,7 +2,6 @@
 
 import json
 import logging
-import os
 import time
 from collections import defaultdict
 from decimal import Decimal
@@ -16,6 +15,10 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
+
+from ..settings import get_settings
+
+_settings = get_settings()
 
 # =============================================================================
 # CACHING LAYER (T058-T060)
@@ -125,8 +128,8 @@ class HeatmapCache:
 
 # Global heatmap cache instance (TTL from env or default 5 minutes)
 _heatmap_cache = HeatmapCache(
-    ttl_seconds=int(os.getenv("LH_CACHE_TTL", "300")),
-    max_size=int(os.getenv("LH_CACHE_MAX_SIZE", "100")),
+    ttl_seconds=_settings.cache_ttl,
+    max_size=_settings.cache_max_size,
 )
 
 
@@ -167,7 +170,7 @@ class SimpleRateLimiter:
 
 
 # Global rate limiter instance
-_rate_limiter = SimpleRateLimiter(requests_per_minute=int(os.getenv("RATE_LIMIT_RPM", "120")))
+_rate_limiter = SimpleRateLimiter(requests_per_minute=_settings.rate_limit_rpm)
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -175,7 +178,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         # Skip rate limiting if disabled
-        if os.getenv("RATE_LIMIT_ENABLED", "true").lower() == "false":
+        if not _settings.rate_limit_enabled:
             return await call_next(request)
 
         # Skip health endpoint
@@ -201,19 +204,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
 
 def get_cors_origins() -> list[str]:
-    """Get CORS allowed origins from environment.
-
-    In production, set CORS_ALLOWED_ORIGINS to comma-separated list of origins.
-    Example: CORS_ALLOWED_ORIGINS=https://app.example.com,https://admin.example.com
-
-    Returns:
-        List of allowed origins. Defaults to ["*"] for development.
-    """
-    origins_env = os.getenv("CORS_ALLOWED_ORIGINS", "")
-    if origins_env:
-        return [origin.strip() for origin in origins_env.split(",") if origin.strip()]
-    # Development default - allow all origins
-    return ["*"]
+    """Get CORS allowed origins from central runtime settings."""
+    return list(_settings.cors_allowed_origins)
 
 
 logging.basicConfig(
@@ -269,6 +261,16 @@ SUPPORTED_EXCHANGES = {
     },
 }
 
+LIQ_MAP_TIMEFRAME_TO_DAYS = {
+    "1d": 1,
+    "1w": 7,
+}
+
+HEATMAP_TIMEFRAME_ALIASES = {
+    "1d": "48h",
+    "1w": "7d",
+}
+
 # Exchange health cache (10s TTL per T066)
 _exchange_health_cache: dict = {}
 _exchange_health_cache_time: float = 0.0
@@ -321,16 +323,18 @@ app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
 
 @app.get("/coinglass")
 async def coinglass_redirect():
-    """Redirect /coinglass to the actual heatmap page."""
+    """Legacy alias for the canonical Coinank-style heatmap route."""
     from fastapi.responses import RedirectResponse
 
-    return RedirectResponse(url="/frontend/coinglass_heatmap.html")
+    return RedirectResponse(url="/chart/derivatives/liq-heat-map/btcusdt/1w")
 
 
 @app.get("/heatmap_30d.html")
 async def heatmap_30d_page():
-    """Serve the single-timeframe validation page at a stable root URL."""
-    return FileResponse("frontend/heatmap_30d.html")
+    """Legacy alias kept for screenshot validation compatibility."""
+    from fastapi.responses import RedirectResponse
+
+    return RedirectResponse(url="/chart/derivatives/liq-heat-map/btcusdt/1w")
 
 
 @app.get("/liq_map_1w.html")
@@ -347,12 +351,60 @@ async def liq_map_1w_symbol(symbol: str):
     return RedirectResponse(url=f"/chart/derivatives/liq-map/binance/{symbol.lower()}/1w")
 
 
-@app.get("/chart/derivatives/liq-map/binance/{symbol}/{timeframe}")
-async def liq_map_coinank_style(symbol: str, timeframe: str):
+@app.get("/chart/derivatives/liq-map/{exchange}/{symbol}/{timeframe}")
+async def liq_map_coinank_style(exchange: str, symbol: str, timeframe: str, request: Request):
     """Coinank-style liq-map route: /chart/derivatives/liq-map/binance/btcusdt/1w"""
     from fastapi.responses import RedirectResponse
 
-    return RedirectResponse(url=f"/liq_map_1w.html?symbol={symbol.upper()}")
+    normalized_exchange = exchange.lower()
+    if normalized_exchange not in SUPPORTED_EXCHANGES:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Invalid exchange '{exchange}'. "
+                f"Supported exchanges: {sorted(SUPPORTED_EXCHANGES)}"
+            ),
+        )
+    normalized_timeframe = timeframe.lower()
+    if normalized_timeframe not in LIQ_MAP_TIMEFRAME_TO_DAYS:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Invalid timeframe '{timeframe}'. "
+                f"Supported liq-map timeframes: {sorted(LIQ_MAP_TIMEFRAME_TO_DAYS)}"
+            ),
+        )
+
+    chart_mode = request.query_params.get("chart")
+    redirect_url = (
+        f"/liq_map_1w.html?exchange={normalized_exchange}&symbol={symbol.upper()}"
+        f"&days={LIQ_MAP_TIMEFRAME_TO_DAYS[normalized_timeframe]}"
+    )
+    if chart_mode:
+        redirect_url = f"{redirect_url}&chart={chart_mode}"
+    return RedirectResponse(url=redirect_url)
+
+
+@app.get("/chart/derivatives/liq-heat-map/{symbol}/{timeframe}")
+async def heatmap_coinank_style(symbol: str, timeframe: str):
+    """Canonical Coinank-style heatmap route: /chart/derivatives/liq-heat-map/btcusdt/1w"""
+    from fastapi.responses import RedirectResponse
+
+    normalized_timeframe = HEATMAP_TIMEFRAME_ALIASES.get(timeframe.lower())
+    if normalized_timeframe is None:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Invalid timeframe '{timeframe}'. "
+                f"Supported liq-heat-map timeframes: {sorted(HEATMAP_TIMEFRAME_ALIASES)}"
+            ),
+        )
+    return RedirectResponse(
+        url=(
+            "/frontend/coinglass_heatmap.html"
+            f"?symbol={symbol.upper()}&window={normalized_timeframe}&ui=minimal"
+        )
+    )
 
 
 class LiquidationResponse(BaseModel):

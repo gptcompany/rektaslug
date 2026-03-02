@@ -4,7 +4,11 @@
 
 set -e
 
-DB_PATH="/workspace/2TB-NVMe/liquidationheatmap_db/liquidations.duckdb"
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+PROJECT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
+. "$PROJECT_DIR/scripts/lib/runtime_env.sh"
+lh_load_runtime_env container
+
 PID_FILE="${DB_PATH}.pid"
 
 echo "🔍 Checking for stuck DuckDB processes..."
@@ -99,4 +103,4 @@ echo "=========================================="
 echo "✅ Cleanup complete"
 echo ""
 echo "You can now run the ingestion script again:"
-echo "  python3 /workspace/1TB/LiquidationHeatmap/ingest_full_history_safe.py [args]"
+echo "  python3 ${PROJECT_DIR}/ingest_full_history_safe.py [args]"

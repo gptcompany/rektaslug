@@ -38,7 +38,8 @@ from pathlib import Path
 from tqdm import tqdm
 
 # Add project root to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from liquidationheatmap.validation import (
     AggregateMetrics,
@@ -48,6 +49,7 @@ from liquidationheatmap.validation import (
     ZoneComparator,
     calculate_aggregate_metrics,
 )
+from liquidationheatmap.settings import get_settings
 
 # Chunk size for memory management in batch mode
 CHUNK_SIZE = 100
@@ -59,6 +61,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+_SETTINGS = get_settings()
 
 
 def parse_args() -> argparse.Namespace:
@@ -79,8 +82,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--api-url",
         type=str,
-        default=os.environ.get("HEATMAP_API_URL", "http://localhost:8002"),
-        help="Heatmap API base URL (default: http://localhost:8002, override with HEATMAP_API_URL)",
+        default=_SETTINGS.api_url,
+        help="Heatmap API base URL (default: central HEATMAP_API_URL setting)",
     )
 
     parser.add_argument(

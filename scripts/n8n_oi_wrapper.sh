@@ -7,10 +7,10 @@
 START_DATE="$1"
 END_DATE="$2"
 
-PROJECT_DIR="/workspace/1TB/LiquidationHeatmap"
-DB_PATH="/workspace/2TB-NVMe/liquidationheatmap_db/liquidations.duckdb"
-DATA_DIR="/workspace/3TB-WDC/binance-history-data-downloader/data"
-API_URL="http://host.docker.internal:8000"
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+PROJECT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+. "$PROJECT_DIR/scripts/lib/runtime_env.sh"
+lh_load_runtime_env container
 
 cd "$PROJECT_DIR"
 

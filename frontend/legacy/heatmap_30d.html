@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Liquidation Heatmap</title>
+    <title>BTC Liquidation Heatmap - 30 Days</title>
     <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -223,28 +223,11 @@
 </head>
 <body>
     <div class="header">
-        <h1>Liquidation Heatmap</h1>
+        <h1>BTC Liquidation Heatmap - 30 Days</h1>
         <div class="controls">
-            <label for="symbolSelect">Symbol:</label>
-            <select id="symbolSelect">
-                <option value="BTCUSDT" selected>BTC/USDT</option>
-                <option value="ETHUSDT">ETH/USDT</option>
-            </select>
-            <label for="timeWindow">Finestra:</label>
-            <select id="timeWindow">
-                <option value="48h">48 ore (30m)</option>
-                <option value="3d">3 giorni (1h)</option>
-                <option value="7d" selected>7 giorni (1h)</option>
-                <option value="14d">14 giorni (2h)</option>
-                <option value="30d">30 giorni (4h)</option>
-                <option value="60d">60 giorni (8h)</option>
-                <option value="90d">90 giorni (12h)</option>
-                <option value="180d">6 mesi (1d)</option>
-                <option value="1y">1 anno (1d)</option>
-            </select>
-            <label for="priceBinSize">Bin:</label>
-            <input type="number" id="priceBinSize" value="500" min="100" max="2000" step="100">
-            <button id="loadBtn" class="primary" onclick="loadHeatmap()">Load</button>
+            <span>BTC/USDT</span>
+            <span>30 Days</span>
+            <span>Bin 500</span>
         </div>
     </div>
 
@@ -338,17 +321,8 @@
         }
 
         function setLoading(isLoading) {
-            const btn = document.getElementById('loadBtn');
-            btn.disabled = isLoading;
-            btn.textContent = isLoading ? 'Loading...' : 'Load Heatmap';
-        }
-
-        function updateHeader(symbol, timeWindow) {
-            const displaySymbol = symbol.replace('USDT', '/USDT');
-            const title = `${displaySymbol} Liquidation Heatmap`;
-            document.title = title;
-            document.querySelector('.header h1').textContent = title;
-            document.getElementById('status').textContent = `Window: ${timeWindow}`;
+            // Single-timeframe page has no interactive controls.
+            void isLoading;
         }
 
         function formatVolume(value) {
@@ -365,14 +339,12 @@
         }
 
         async function loadHeatmap() {
-            const symbol = document.getElementById('symbolSelect').value;
-            const timeWindow = document.getElementById('timeWindow').value;
-            const priceBinSize = document.getElementById('priceBinSize').value;
-
-            updateHeader(symbol, timeWindow);
+            const symbol = 'BTCUSDT';
+            const timeWindow = '30d';
+            const priceBinSize = '500';
 
             setLoading(true);
-            setStatus(`Loading ${symbol} time-evolving heatmap...`, 'loading');
+            setStatus(`Loading ${symbol} 30d time-evolving heatmap...`, 'loading');
 
             try {
                 // Use time_window parameter - API auto-calculates interval and start_time
@@ -683,34 +655,13 @@
             }
         }
 
-        // T52: Auto-load on page ready with error handling
-        // Support URL parameters for testing: ?window=7d&bin=500
+        // Single-timeframe page: auto-load fixed parameters on page ready
         document.addEventListener('DOMContentLoaded', () => {
-            const params = new URLSearchParams(window.location.search);
-            if (params.has('symbol')) {
-                document.getElementById('symbolSelect').value = params.get('symbol').toUpperCase();
-            }
-            if (params.has('window')) {
-                document.getElementById('timeWindow').value = params.get('window');
-            }
-            if (params.has('bin')) {
-                document.getElementById('priceBinSize').value = params.get('bin');
-            }
-            if (params.get('ui') === 'minimal') {
-                document.querySelector('.controls').style.display = 'none';
-                document.getElementById('helpToggle').style.display = 'none';
-            }
-
-            updateHeader(
-                document.getElementById('symbolSelect').value,
-                document.getElementById('timeWindow').value
-            );
-
             // Give the server time to be ready
             setTimeout(() => {
                 loadHeatmap().catch(err => {
                     console.error('Initial load failed:', err);
-                    setStatus('Initial load failed. Click "Load Heatmap" to retry.', 'error');
+                    setStatus('Initial load failed. Refresh to retry.', 'error');
                 });
             }, 500);
         });

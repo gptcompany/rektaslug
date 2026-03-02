@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Capture side-by-side validation screenshots for our 1w liq-map vs Coinank.
+"""Capture side-by-side validation screenshots for our canonical liq-map vs Coinank.
 
 Pipeline:
 1. Ensure local FastAPI is running
-2. Screenshot the local liq_map_1w.html page
+2. Screenshot the local Coinank-style liq-map route
 3. Screenshot Coinank ``liq-map/binance/btcusdt/1w``
 4. Save both files to ``data/validation/liqmap/`` with a shared timestamp
 """
@@ -24,14 +24,27 @@ from typing import Any
 from urllib.error import URLError
 from urllib.request import urlopen
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from src.liquidationheatmap.settings import get_settings
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from coinank_screenshot import capture_coinank_liqmap
 
+_SETTINGS = get_settings()
+
 DEFAULT_HOST = "127.0.0.1"
-DEFAULT_PORT = int(os.environ.get("HEATMAP_PORT", 8002))
+DEFAULT_PORT = _SETTINGS.port
 DEFAULT_SYMBOL = "BTCUSDT"
 DEFAULT_MODEL = "openinterest"
 DEFAULT_TIMEFRAME = 7
+
+ROUTE_TIMEFRAME_BY_DAYS = {
+    1: "1d",
+    7: "1w",
+}
 
 
 def http_get_json(url: str, timeout: float = 3.0) -> dict[str, Any]:
@@ -269,6 +282,25 @@ def stop_local_server(proc: subprocess.Popen | None) -> None:
                 pass
 
 
+def build_liqmap_page_url(
+    api_base: str,
+    exchange: str,
+    symbol: str,
+    timeframe: int,
+    chart_mode: str,
+) -> str:
+    route_timeframe = ROUTE_TIMEFRAME_BY_DAYS.get(timeframe)
+    if route_timeframe is None:
+        raise ValueError(f"Unsupported liq-map timeframe '{timeframe}'. Use 1 or 7 days only.")
+    page_url = (
+        f"{api_base}/chart/derivatives/liq-map/"
+        f"{exchange.lower()}/{symbol.lower()}/{route_timeframe}"
+    )
+    if chart_mode != "bar":
+        page_url = f"{page_url}?chart={chart_mode}"
+    return page_url
+
+
 async def wait_for_local_liqmap_ready(page) -> dict[str, Any]:
     """Wait for the Plotly liq-map chart to render."""
     await page.wait_for_selector("#liquidation-map", state="visible", timeout=30000)
@@ -351,7 +383,7 @@ def parse_args() -> argparse.Namespace:
         "--timeframe",
         type=int,
         default=DEFAULT_TIMEFRAME,
-        help="Timeframe in days for API (default 7)",
+        help="Timeframe in days for API (supported: 1 or 7, default 7)",
     )
     parser.add_argument(
         "--coin",
@@ -381,9 +413,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--chart-mode",
-        default="area",
+        default="bar",
         choices=["area", "bar"],
-        help="Chart rendering mode for local screenshot (default: area)",
+        help="Chart rendering mode for local screenshot (default: bar)",
     )
     return parser.parse_args()
 
@@ -414,19 +446,25 @@ def main() -> int:
 
     proc: subprocess.Popen | None = None
     api_base = f"http://{args.host}:{args.port}"
-    chart_param = f"chart={args.chart_mode}" if args.chart_mode != "bar" else ""
-    page_url = f"{api_base}/liq_map_1w.html"
-    if chart_param:
-        page_url = f"{page_url}?{chart_param}"
+    page_url = build_liqmap_page_url(
+        api_base=api_base,
+        exchange=args.exchange,
+        symbol=args.symbol,
+        timeframe=args.timeframe,
+        chart_mode=args.chart_mode,
+    )
 
     try:
         proc, api_base = start_local_server_if_needed(
             repo_root=repo_root, host=args.host, port=args.port
         )
-        # Rebuild page_url with resolved api_base
-        page_url = f"{api_base}/liq_map_1w.html"
-        if chart_param:
-            page_url = f"{page_url}?{chart_param}"
+        page_url = build_liqmap_page_url(
+            api_base=api_base,
+            exchange=args.exchange,
+            symbol=args.symbol,
+            timeframe=args.timeframe,
+            chart_mode=args.chart_mode,
+        )
 
         api_preflight = preflight_liqmap_api(
             api_base=api_base,
@@ -457,6 +495,7 @@ def main() -> int:
                 headless=not args.headed,
             )
         )
+        coinank_capture_info: dict = {}
         asyncio.run(
             capture_coinank_liqmap(
                 coin=args.coin,
@@ -466,8 +505,185 @@ def main() -> int:
                 headless=not args.headed,
                 email=email,
                 password=password,
+                capture_info=coinank_capture_info,
             )
         )
+
+        # Visual element checklist for 1:1 Coinank validation (>= 95% target)
+        visual_element_checklist = {
+            "tier1_blockers": [
+                {
+                    "id": "T1-01",
+                    "element": "Chart renders",
+                    "description": "No blank page, no loading, no JS errors",
+                },
+                {
+                    "id": "T1-02",
+                    "element": "Bars both sides",
+                    "description": "Stacked bars left (long) AND right (short) of current price",
+                },
+                {
+                    "id": "T1-03",
+                    "element": "Current price marker",
+                    "description": "Red dashed vertical line at correct price",
+                },
+                {
+                    "id": "T1-04",
+                    "element": "Cumulative lines",
+                    "description": "Red/pink (long, descending) AND green/cyan (short, ascending)",
+                },
+                {
+                    "id": "T1-05",
+                    "element": "Price range",
+                    "description": "X-axis range includes current price with margin",
+                },
+            ],
+            "tier2_structure": [
+                {
+                    "id": "T2-01",
+                    "element": "Bar chart type",
+                    "description": "Stacked vertical bars, NOT area chart",
+                },
+                {
+                    "id": "T2-02",
+                    "element": "3 leverage groups",
+                    "description": "Low (blue), Medium (purple), High (orange/salmon)",
+                },
+                {
+                    "id": "T2-03",
+                    "element": "Leverage colors",
+                    "description": "Blue/purple/orange color families matching Coinank",
+                },
+                {
+                    "id": "T2-04",
+                    "element": "Stacking order",
+                    "description": "Low (bottom) -> Medium -> High (top)",
+                },
+                {
+                    "id": "T2-05",
+                    "element": "Cumulative Long fill",
+                    "description": "Filled area below red line (light pink, semi-transparent)",
+                },
+                {
+                    "id": "T2-06",
+                    "element": "Cumulative Short fill",
+                    "description": "Filled area below green line (light green, semi-transparent)",
+                },
+                {
+                    "id": "T2-07",
+                    "element": "Cumulative Long direction",
+                    "description": "Starts high at left, descends toward current price",
+                },
+                {
+                    "id": "T2-08",
+                    "element": "Cumulative Short direction",
+                    "description": "Starts near zero at current price, ascends right",
+                },
+                {
+                    "id": "T2-09",
+                    "element": "Current price label",
+                    "description": "Text 'Current Price: XXXXX' above chart area",
+                },
+                {
+                    "id": "T2-10",
+                    "element": "Current price arrow",
+                    "description": "Red upward arrow/triangle at top of dashed line",
+                },
+                {
+                    "id": "T2-11",
+                    "element": "Current price dot",
+                    "description": "Red circle/dot at bottom of dashed line",
+                },
+                {
+                    "id": "T2-12",
+                    "element": "Y-axis left",
+                    "description": "Volume scale with M suffix, no axis title",
+                },
+                {
+                    "id": "T2-13",
+                    "element": "Y-axis right",
+                    "description": "Cumulative scale with M/B suffix, no axis title",
+                },
+                {
+                    "id": "T2-14",
+                    "element": "X-axis format",
+                    "description": "Plain numbers, no comma separator, no $ sign",
+                },
+                {
+                    "id": "T2-15",
+                    "element": "No axis titles",
+                    "description": "Only tick numbers, no descriptive labels",
+                },
+                {
+                    "id": "T2-16",
+                    "element": "No chart title",
+                    "description": "No title text above chart, legend only",
+                },
+                {
+                    "id": "T2-17",
+                    "element": "Legend position",
+                    "description": "Horizontal, centered, above chart area",
+                },
+                {
+                    "id": "T2-18",
+                    "element": "Legend content",
+                    "description": "Only 3 leverage group entries",
+                },
+                {
+                    "id": "T2-19",
+                    "element": "White background",
+                    "description": "White/light background, NOT dark",
+                },
+                {
+                    "id": "T2-20",
+                    "element": "Range slider",
+                    "description": "Horizontal zoom/pan slider at bottom",
+                },
+                {
+                    "id": "T2-21",
+                    "element": "Grid lines",
+                    "description": "Light horizontal grid lines",
+                },
+            ],
+            "tier3_magnitude": [
+                {
+                    "id": "T3-01",
+                    "element": "Volume scale",
+                    "description": "Y-left same order of magnitude as Coinank",
+                },
+                {
+                    "id": "T3-02",
+                    "element": "Cumulative scale",
+                    "description": "Y-right same order of magnitude",
+                },
+                {
+                    "id": "T3-03",
+                    "element": "Long/Short ratio",
+                    "description": "Both sides present, ratio within 2x",
+                },
+                {
+                    "id": "T3-04",
+                    "element": "Top volume zones",
+                    "description": "Highest bars at similar price levels (+-2%)",
+                },
+                {
+                    "id": "T3-05",
+                    "element": "Price range coverage",
+                    "description": "Similar min/max prices (+-10%)",
+                },
+                {
+                    "id": "T3-06",
+                    "element": "Leverage dominance",
+                    "description": "Same tier ordering (typically Low > Med > High)",
+                },
+            ],
+            "scoring": {
+                "tier1": "pass/fail gate (any fail = score 0)",
+                "tier2": "21 elements x ~4 points = 84 points max",
+                "tier3": "6 elements x ~2.7 points = 16 points max",
+                "threshold": 95,
+            },
+        }
 
         manifest = {
             "timestamp": timestamp,
@@ -479,6 +695,8 @@ def main() -> int:
             "numerical_metrics": numerical_metrics,
             "data_freshness": data_freshness,
             "local_page_state": local_state,
+            "coinank_capture_info": coinank_capture_info,
+            "visual_element_checklist": visual_element_checklist,
         }
         manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
@@ -495,6 +713,18 @@ def main() -> int:
             print(f"warning: local page not fully ready (hasPlot={local_state.get('hasPlot')})")
         if data_freshness.get("warning"):
             print(f"warning: {data_freshness['warning']}")
+
+        # Coinank capture method reporting
+        capture_method = coinank_capture_info.get("method", "unknown")
+        login_ok = coinank_capture_info.get("login_success", False)
+        print(f"coinank_capture_method={capture_method}")
+        if coinank_capture_info.get("login_attempted") and not login_ok:
+            print("warning: coinank login failed - native download unavailable, used crop fallback")
+        if capture_method == "screenshot_crop":
+            print(
+                "warning: coinank reference is a screenshot crop, NOT native download. "
+                "For best 1:1 validation, ensure COINANK_USER and COINANK_PASSWORD are set."
+            )
 
         return 0
     except URLError as exc:

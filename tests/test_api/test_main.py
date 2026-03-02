@@ -225,3 +225,79 @@ class TestFrontendStaticFiles:
         response = client.get("/frontend/liquidation_map.html")
         assert response.status_code == 200
         assert "text/html" in response.headers["content-type"]
+
+    def test_frontend_legacy_liquidation_map_html_is_served(self, client):
+        """Test that archived frontend remains accessible for reference."""
+        response = client.get("/frontend/legacy/liquidation_map.html")
+        assert response.status_code == 200
+        assert "text/html" in response.headers["content-type"]
+
+    def test_coinank_liqmap_route_redirects_to_canonical_page(self, client):
+        """Test canonical liq-map route redirects to the permalink-friendly page."""
+        response = client.get(
+            "/chart/derivatives/liq-map/binance/btcusdt/1w",
+            follow_redirects=False,
+        )
+        assert response.status_code in (307, 308)
+        assert (
+            response.headers["location"]
+            == "/liq_map_1w.html?exchange=binance&symbol=BTCUSDT&days=7"
+        )
+
+    def test_coinank_liqmap_1d_route_redirects_to_one_day_page(self, client):
+        """Test 1d liq-map route redirects with an explicit one-day payload window."""
+        response = client.get(
+            "/chart/derivatives/liq-map/bybit/btcusdt/1d",
+            follow_redirects=False,
+        )
+        assert response.status_code in (307, 308)
+        assert (
+            response.headers["location"]
+            == "/liq_map_1w.html?exchange=bybit&symbol=BTCUSDT&days=1"
+        )
+
+    def test_coinank_heatmap_route_redirects_to_canonical_page(self, client):
+        """Test canonical heatmap route redirects to the canonical frontend page."""
+        response = client.get(
+            "/chart/derivatives/liq-heat-map/ethusdt/1w",
+            follow_redirects=False,
+        )
+        assert response.status_code in (307, 308)
+        assert (
+            response.headers["location"]
+            == "/frontend/coinglass_heatmap.html?symbol=ETHUSDT&window=7d&ui=minimal"
+        )
+
+    def test_coinank_heatmap_1d_route_redirects_to_short_window(self, client):
+        """Test 1d heatmap route maps to the shortest supported internal window."""
+        response = client.get(
+            "/chart/derivatives/liq-heat-map/btcusdt/1d",
+            follow_redirects=False,
+        )
+        assert response.status_code in (307, 308)
+        assert (
+            response.headers["location"]
+            == "/frontend/coinglass_heatmap.html?symbol=BTCUSDT&window=48h&ui=minimal"
+        )
+
+    def test_legacy_heatmap_alias_redirects_to_coinank_style_route(self, client):
+        """Test legacy root alias forwards to the canonical heatmap path."""
+        response = client.get("/coinglass", follow_redirects=False)
+        assert response.status_code in (307, 308)
+        assert response.headers["location"] == "/chart/derivatives/liq-heat-map/btcusdt/1w"
+
+    def test_coinank_heatmap_rejects_unsupported_timeframe(self, client):
+        """Test unsupported heatmap timeframes fail fast instead of silently remapping."""
+        response = client.get(
+            "/chart/derivatives/liq-heat-map/btcusdt/1M",
+            follow_redirects=False,
+        )
+        assert response.status_code == 400
+
+    def test_coinank_liqmap_rejects_unsupported_timeframe(self, client):
+        """Test unsupported liq-map timeframes fail fast instead of silently remapping."""
+        response = client.get(
+            "/chart/derivatives/liq-map/binance/btcusdt/1M",
+            follow_redirects=False,
+        )
+        assert response.status_code == 400

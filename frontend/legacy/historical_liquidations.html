@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BTC/USDT Historical Liquidations</title>
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>BTC/USDT Historical Liquidations Chart</h1>
+    <div class="controls">
+        <button onclick="loadHistoricalData()">Load Historical Data</button>
+        <select id="aggregationSelect">
+            <option value="total_volume">Total Volume</option>
+            <option value="num_levels">Number of Levels</option>
+            <option value="avg_price">Average Price</option>
+        </select>
+        <label>
+            <input type="checkbox" id="aggregateCheckbox" checked> Aggregate by time
+        </label>
+    </div>
+    <div id="chart"></div>
+    <div id="info"></div>
+
+    <script>
+        // Coinglass color scheme from examples/liquidations_chart_plot.py
+        const COLORS = {
+            shorts: '#d9024b',  // Red for short liquidations
+            longs: '#45bf87',   // Green for long liquidations
+            price: '#f0b90b',   // Yellow/gold for price
+            background: '#0d1117'
+        };
+
+        async function loadHistoricalData() {
+            const aggregate = document.getElementById('aggregateCheckbox').checked;
+            
+            try {
+                // Fetch from real API endpoint (T047)
+                const response = await fetch(`/liquidations/history?symbol=BTCUSDT&aggregate=${aggregate}`);
+
+                if (!response.ok) {
+                    throw new Error(`API returned ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.length === 0) {
+                    document.getElementById('info').innerHTML = `<p class="error">No historical data available. Run: python scripts/generate_heatmap_cache.py</p>`;
+                    return;
+                }
+
+                renderHistoricalChart(data, aggregate);
+
+            } catch (error) {
+                document.getElementById('info').innerHTML = `<p class="error">Error: ${error.message}</p>`;
+                console.error('Error loading historical data:', error);
+            }
+        }
+
+        function renderHistoricalChart(rawData, isAggregated) {
+            const aggregationType = document.getElementById('aggregationSelect').value;
+
+            if (isAggregated) {
+                // Aggregated data: already grouped by timestamp and side
+                const timestamps = [...new Set(rawData.map(d => d.timestamp))].sort();
+
+                const longsData = timestamps.map(ts => {
+                    const record = rawData.find(d => d.timestamp === ts && d.side === 'long');
+                    return record ? parseFloat(record[aggregationType]) : 0;
+                });
+
+                const shortsData = timestamps.map(ts => {
+                    const record = rawData.find(d => d.timestamp === ts && d.side === 'short');
+                    return record ? parseFloat(record[aggregationType]) : 0;
+                });
+
+                // Make shorts negative for dual-axis effect (Coinglass style)
+                const shortsDataNegative = shortsData.map(v => -v);
+
+                createBarChart(timestamps, longsData, shortsDataNegative, aggregationType);
+                
+                document.getElementById('info').innerHTML = `
+                    <p><strong>Data Range:</strong> ${timestamps[0]} to ${timestamps[timestamps.length - 1]}</p>
+                    <p><strong>Total Snapshots:</strong> ${timestamps.length}</p>
+                    <p><strong>Mode:</strong> Aggregated (grouped by timestamp and side)</p>
+                `;
+
+            } else {
+                // Raw data: individual liquidation records
+                // Group by timestamp for visualization
+                const byTimestamp = {};
+                rawData.forEach(rec => {
+                    if (!byTimestamp[rec.timestamp]) {
+                        byTimestamp[rec.timestamp] = { long: 0, short: 0 };
+                    }
+                    byTimestamp[rec.timestamp][rec.side] += rec.quantity;
+                });
+
+                const timestamps = Object.keys(byTimestamp).sort();
+                const longsData = timestamps.map(ts => byTimestamp[ts].long);
+                const shortsData = timestamps.map(ts => -byTimestamp[ts].short);
+
+                createBarChart(timestamps, longsData, shortsData, 'quantity');
+
+                document.getElementById('info').innerHTML = `
+                    <p><strong>Total Records:</strong> ${rawData.length}</p>
+                    <p><strong>Time Range:</strong> ${timestamps[0]} to ${timestamps[timestamps.length - 1]}</p>
+                    <p><strong>Mode:</strong> Raw records (individual liquidations)</p>
+                `;
+            }
+        }
+
+        function createBarChart(timestamps, longsData, shortsData, metric) {
+            const longsTrace = {
+                x: timestamps,
+                y: longsData,
+                type: 'bar',
+                name: 'Longs',
+                marker: { color: COLORS.longs },
+                hovertemplate: 'Time: %{x}<br>Longs: %{y:.2e}<extra></extra>'
+            };
+
+            const shortsTrace = {
+                x: timestamps,
+                y: shortsData,
+                type: 'bar',
+                name: 'Shorts',
+                marker: { color: COLORS.shorts },
+                hovertemplate: 'Time: %{x}<br>Shorts: %{y:.2e}<extra></extra>'
+            };
+
+            const layout = {
+                title: 'Total Liquidations Chart (Historical)',
+                xaxis: {
+                    title: 'Time',
+                    showgrid: true,
+                    gridcolor: '#30363d',
+                    type: 'date'
+                },
+                yaxis: {
+                    title: metric === 'total_volume' ? 'Liquidation Volume' :
+                           metric === 'num_levels' ? 'Number of Levels' :
+                           metric === 'avg_price' ? 'Average Price (USD)' :
+                           'Quantity',
+                    showgrid: true,
+                    gridcolor: '#30363d',
+                    zeroline: true,
+                    zerolinecolor: '#30363d'
+                },
+                paper_bgcolor: COLORS.background,
+                plot_bgcolor: COLORS.background,
+                font: { color: '#c9d1d9' },
+                barmode: 'overlay',
+                showlegend: true,
+                legend: {
+                    orientation: 'h',
+                    x: 0.5,
+                    xanchor: 'center',
+                    y: 1.1
+                }
+            };
+
+            Plotly.newPlot('chart', [longsTrace, shortsTrace], layout, {responsive: true});
+        }
+
+        // Auto-load on page load
+        window.onload = () => loadHistoricalData();
+    </script>
+</body>
+</html>

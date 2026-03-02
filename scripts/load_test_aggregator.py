@@ -11,18 +11,26 @@ Usage:
 import argparse
 import asyncio
 import logging
-import os
 import statistics
+import sys
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 
 import aiohttp
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from src.liquidationheatmap.settings import get_settings
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+_SETTINGS = get_settings()
 
 
 class LoadTestClient:
@@ -204,8 +212,8 @@ async def main():
     parser.add_argument(
         "--url",
         type=str,
-        default=os.environ.get("HEATMAP_API_URL", "http://localhost:8002"),
-        help="Base URL of the API (default: HEATMAP_API_URL or http://localhost:8002)",
+        default=_SETTINGS.api_url,
+        help="Base URL of the API (default: central HEATMAP_API_URL setting)",
     )
     args = parser.parse_args()
 

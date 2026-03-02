@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Capture side-by-side validation screenshots for our 30d heatmap vs Coinank.
+"""Capture side-by-side validation screenshots for our canonical heatmap vs Coinank.
 
 Pipeline:
 1. Ensure local FastAPI is running
-2. Screenshot the local heatmap_30d.html page
-3. Screenshot Coinank `btcusdt/1M`
+2. Screenshot the local Coinank-style heatmap route
+3. Screenshot Coinank `btcusdt/1w`
 4. Save both files to `data/validation/` with a shared timestamp
 """
 
@@ -24,14 +24,27 @@ from typing import Any
 from urllib.error import URLError
 from urllib.request import urlopen
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from src.liquidationheatmap.settings import get_settings
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from coinank_screenshot import capture_coinank_heatmap
 
+_SETTINGS = get_settings()
+
 DEFAULT_HOST = "127.0.0.1"
-DEFAULT_PORT = int(os.environ.get("HEATMAP_PORT", 8002))
+DEFAULT_PORT = _SETTINGS.port
 DEFAULT_SYMBOL = "BTCUSDT"
-DEFAULT_TIME_WINDOW = "30d"
+DEFAULT_TIME_WINDOW = "7d"
 DEFAULT_PRICE_BIN_SIZE = 500
+
+ROUTE_TIMEFRAME_BY_TIME_WINDOW = {
+    "48h": "1d",
+    "7d": "1w",
+}
 
 
 def http_get_json(url: str, timeout: float = 3.0) -> dict[str, Any]:
@@ -133,7 +146,16 @@ def stop_local_server(proc: subprocess.Popen | None) -> None:
             try:
                 proc.kill()
             except Exception:
-                pass
+            pass
+
+
+def build_heatmap_page_url(api_base: str, symbol: str, time_window: str) -> str:
+    route_timeframe = ROUTE_TIMEFRAME_BY_TIME_WINDOW.get(time_window)
+    if route_timeframe is None:
+        raise ValueError(
+            f"Unsupported liq-heat-map time_window '{time_window}'. Use 48h or 7d only."
+        )
+    return f"{api_base}/chart/derivatives/liq-heat-map/{symbol.lower()}/{route_timeframe}"
 
 
 async def wait_for_local_page_ready(page) -> dict[str, Any]:
@@ -200,10 +222,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--host", default=DEFAULT_HOST, help="Local FastAPI host")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="Local FastAPI port")
     parser.add_argument("--symbol", default=DEFAULT_SYMBOL, help="Symbol for API preflight (default BTCUSDT)")
-    parser.add_argument("--time-window", default=DEFAULT_TIME_WINDOW, help="API time_window (default 30d)")
+    parser.add_argument(
+        "--time-window",
+        default=DEFAULT_TIME_WINDOW,
+        help="API time_window (supported: 48h or 7d, default 7d)",
+    )
     parser.add_argument("--price-bin-size", type=int, default=DEFAULT_PRICE_BIN_SIZE, help="API price_bin_size")
     parser.add_argument("--coin", default="BTC", help="Coin symbol for Coinank screenshot")
-    parser.add_argument("--coinank-timeframe", default="1M", help="Coinank timeframe path segment")
+    parser.add_argument("--coinank-timeframe", default="1w", help="Coinank timeframe path segment")
     parser.add_argument(
         "--output-dir",
         type=Path,
@@ -229,11 +255,15 @@ def main() -> int:
 
     proc: subprocess.Popen | None = None
     api_base = f"http://{args.host}:{args.port}"
-    page_url = f"{api_base}/heatmap_30d.html"
+    page_url = build_heatmap_page_url(api_base=api_base, symbol=args.symbol, time_window=args.time_window)
 
     try:
         proc, api_base = start_local_server_if_needed(repo_root=repo_root, host=args.host, port=args.port)
-        page_url = f"{api_base}/heatmap_30d.html"
+        page_url = build_heatmap_page_url(
+            api_base=api_base,
+            symbol=args.symbol,
+            time_window=args.time_window,
+        )
 
         api_preflight = preflight_heatmap_api(
             api_base=api_base,

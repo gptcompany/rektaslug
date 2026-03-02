@@ -14,6 +14,7 @@ nav:
   - API Reference: api/index.md
   - Runbooks:
       - Overview: runbooks/index.md
+      - Chart Routes: runbooks/chart-routes.md
 
 theme:
   name: material

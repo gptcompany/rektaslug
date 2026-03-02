@@ -15,17 +15,13 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+. "$SCRIPT_DIR/lib/runtime_env.sh"
+lh_load_runtime_env host
+
 # =============================================================================
 # Configuration
 # =============================================================================
-
-PROJECT_DIR="/media/sam/1TB/LiquidationHeatmap"
-DB_PATH="/media/sam/2TB-NVMe/liquidationheatmap_db/liquidations.duckdb"
-DATA_DIR="/media/sam/3TB-WDC/binance-history-data-downloader/data"
-CCXT_CATALOG="/media/sam/1TB/ccxt-data-pipeline/data/catalog"
-API_URL="${HEATMAP_API_URL:-http://localhost:8002}"
-LOG_DIR="${PROJECT_DIR}/logs/ingestion"
-SYMBOLS="BTCUSDT ETHUSDT"
 
 # Retry settings
 MAX_RETRIES=3
@@ -84,7 +80,7 @@ send_discord() {
 
     # Load webhook URL from dotenvx (safe - value never printed)
     local webhook_url
-    webhook_url=$(dotenvx get DISCORD_WEBHOOK_LIQUIDATION -f /media/sam/1TB/.env 2>/dev/null || echo "")
+    webhook_url=$(dotenvx get DISCORD_WEBHOOK_LIQUIDATION -f "$SHARED_ENV_FILE" 2>/dev/null || echo "")
 
     if [ -z "$webhook_url" ]; then
         log "WARN: DISCORD_WEBHOOK_URL not available, skipping notification"

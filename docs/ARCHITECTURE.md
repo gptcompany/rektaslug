@@ -531,32 +531,24 @@ MA[i] = MA[i-1] + boundary[i] × (rate[i] - rate[i-1])
 
 ### Environment Variables
 
-Create `.env` from `.env.template`:
+Create `.env` from `.env.example`.
+
+Primary runtime settings are centralized in `src/liquidationheatmap/settings.py`, while shell wrappers share the same contract through `scripts/lib/runtime_env.sh`.
 
 ```bash
-# Database Configuration (NVMe for fast I/O)
-DUCKDB_PATH=/media/sam/2TB-NVMe/liquidationheatmap_db/liquidations.duckdb
-# N8N Container: /workspace/2TB-NVMe/liquidationheatmap_db/liquidations.duckdb
+# Core runtime
+HEATMAP_HOST=0.0.0.0
+HEATMAP_PORT=8002
+HEATMAP_API_URL=http://localhost:8002
+HEATMAP_PROJECT_ROOT=/media/sam/1TB/LiquidationHeatmap
+HEATMAP_DB_PATH=/media/sam/2TB-NVMe/liquidationheatmap_db/liquidations.duckdb
+HEATMAP_DATA_DIR=/media/sam/3TB-WDC/binance-history-data-downloader/data
 
-# Data Sources (HDD - read-only raw CSV)
-BINANCE_DATA_PATH=/media/sam/3TB-WDC/binance-history-data-downloader/data
-
-# API Configuration
-API_HOST=0.0.0.0
-API_PORT=8000
-API_RELOAD=true
-
-# Model Configuration
-DEFAULT_MODEL=ensemble
-DEFAULT_SYMBOL=BTCUSDT
-
-# Cache Configuration
-CACHE_TTL_SECONDS=3600
-HEATMAP_CACHE_ENABLED=true
-
-# Logging
-LOG_LEVEL=INFO
-LOG_FILE=logs/liquidationheatmap.log
+# Optional container overrides
+HEATMAP_CONTAINER_PROJECT_ROOT=/workspace/1TB/LiquidationHeatmap
+HEATMAP_CONTAINER_DB_PATH=/workspace/2TB-NVMe/liquidationheatmap_db/liquidations.duckdb
+HEATMAP_CONTAINER_DATA_DIR=/workspace/3TB-WDC/binance-history-data-downloader/data
+HEATMAP_CONTAINER_API_URL=http://host.docker.internal:8002
 ```
 
 ### YAML Configuration Files

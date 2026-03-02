@@ -8,6 +8,7 @@ Type=oneshot
 User=sam
 Group=sam
 WorkingDirectory=/media/sam/1TB/LiquidationHeatmap
+EnvironmentFile=-/media/sam/1TB/LiquidationHeatmap/.env
 
 # Environment
 Environment=QUESTDB_HOST=localhost

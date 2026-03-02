@@ -51,13 +51,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - Long liquidation: `entry_price * (1 - 1/leverage + maintenance_margin/leverage)`
   - Short liquidation: `entry_price * (1 + 1/leverage - maintenance_margin/leverage)`
 - **Heatmap Generation**: Clustering algorithm from Open Interest + funding rates
-- **REST API**: FastAPI endpoints (`/liquidations/heatmap`, `/historical`)
+- **REST API**: FastAPI endpoints from `src/liquidationheatmap/api/main.py`
 - **Streaming**: Redis pub/sub for real-time liquidation events (Nautilus pattern)
 - **Responsible Agent**: `quant-analyst`
 
 ### Layer 3: Visualization (Plotly.js)
-- **Heatmap**: Plotly.js scatter plot (price levels vs liquidation density)
-- **Frontend**: Single HTML page (like UTXOracle - no build step)
+- **Heatmap**: Plotly.js browser rendering for liq-map and liq-heat-map views
+- **Frontend**: Active pages in `frontend/` with archived legacy implementations in `frontend/legacy/`
 - **API Client**: Fetch API for REST endpoints
 - **Real-time**: WebSocket client for Redis pub/sub (future)
 
@@ -67,8 +67,8 @@ Binance CSV (3TB-WDC)
   → DuckDB ingestion (scripts/ingest_historical.py)
   → Liquidation calculation (src/models/liquidation.py)
   → Heatmap clustering (src/models/heatmap.py)
-  → REST API (api/main.py)
-  → Plotly.js visualization (frontend/heatmap.html)
+  → REST API (src/liquidationheatmap/api/main.py)
+  → Canonical chart routes (/chart/derivatives/...)
 ```
 
 ### Tech Stack
@@ -89,6 +89,7 @@ Binance CSV (3TB-WDC)
 
 ```
 LiquidationHeatmap/
+├── archive/               # Archived reports, notes, legacy config templates
 ├── src/                   # Core application code
 ├── tests/                 # Test suite (pytest)
 ├── scripts/               # Utilities and batch jobs
@@ -96,14 +97,14 @@ LiquidationHeatmap/
 │   ├── raw/               # Symlink to 3TB-WDC Binance CSV (read-only)
 │   └── cache/             # Temporary cache (gitignored)
 # Database: /media/sam/2TB-NVMe/liquidationheatmap_db/liquidations.duckdb (external, NVMe)
-├── frontend/              # Lightweight visualization
+├── frontend/              # Active UI pages + compatibility wrappers
+│   └── legacy/            # Archived frontend implementations
 ├── .claude/               # Claude Code configuration
 │   ├── agents/            # Specialized subagents
 │   ├── skills/            # Template-driven automation
 │   ├── commands/          # SpecKit slash commands
 │   ├── prompts/           # Orchestration rules
 │   └── tdd-guard/         # TDD enforcement
-├── .serena/               # Code navigation memory
 ├── .specify/              # Task management
 ├── CLAUDE.md              # THIS FILE
 ├── README.md              # Public documentation

@@ -1,6 +1,15 @@
 # LiquidationHeatmap
 
+![CI](https://github.com/gptcompany/LiquidationHeatmap/actions/workflows/ci.yml/badge.svg)
+![TechDocs](https://github.com/gptcompany/LiquidationHeatmap/actions/workflows/techdocs.yml/badge.svg)
+![Validation](https://github.com/gptcompany/LiquidationHeatmap/actions/workflows/validation.yml/badge.svg)
+![Python](https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square&logo=python)
+![License](https://img.shields.io/github/license/gptcompany/LiquidationHeatmap?style=flat-square)
+![Last Commit](https://img.shields.io/github/last-commit/gptcompany/LiquidationHeatmap?style=flat-square)
+
 Calculate and visualize cryptocurrency liquidation levels from Binance futures data using DuckDB analytics and FastAPI REST endpoints. Leverages open-source models (py-liquidation-map) for battle-tested algorithms.
+
+Primary runtime configuration is now centralized in `src/liquidationheatmap/settings.py`, with shell wrappers loading the same environment contract through `scripts/lib/runtime_env.sh`. Environment overrides are documented in `.env.example`.
 
 ## Quick Start
 
@@ -25,14 +34,47 @@ uv run python scripts/ingest_aggtrades.py \
 uv run python scripts/validate_aggtrades.py
 
 # Run FastAPI server
-uv run uvicorn api.main:app --reload
+uv run uvicorn src.liquidationheatmap.api.main:app --host ${HEATMAP_HOST:-0.0.0.0} --port ${HEATMAP_PORT:-8002}
 
-# Open visualization
-open http://localhost:8000/heatmap.html
+# Open canonical chart routes
+open http://localhost:8002/chart/derivatives/liq-map/binance/btcusdt/1w
+open http://localhost:8002/chart/derivatives/liq-heat-map/btcusdt/1w
 
 # Run tests
 uv run pytest
 ```
+
+## Canonical Chart Routes
+
+Use these routes for validation, screenshots, and automation loops:
+
+- `http://localhost:8002/chart/derivatives/liq-map/<exchange>/<symbol>/1d`
+- `http://localhost:8002/chart/derivatives/liq-map/<exchange>/<symbol>/1w`
+- `http://localhost:8002/chart/derivatives/liq-heat-map/<symbol>/1d`
+- `http://localhost:8002/chart/derivatives/liq-heat-map/<symbol>/1w`
+
+Current `liq-map` reference set for the active Binance baseline:
+
+- Coinank:
+  `https://coinank.com/chart/derivatives/liq-map/binance/btcusdt/1d`
+- Coinank:
+  `https://coinank.com/chart/derivatives/liq-map/binance/btcusdt/1w`
+- Coinank:
+  `https://coinank.com/chart/derivatives/liq-map/binance/ethusdt/1d`
+- Coinank:
+  `https://coinank.com/chart/derivatives/liq-map/binance/ethusdt/1w`
+- Local:
+  `http://localhost:8002/chart/derivatives/liq-map/binance/btcusdt/1d`
+- Local:
+  `http://localhost:8002/chart/derivatives/liq-map/binance/btcusdt/1w`
+- Local:
+  `http://localhost:8002/chart/derivatives/liq-map/binance/ethusdt/1d`
+- Local:
+  `http://localhost:8002/chart/derivatives/liq-map/binance/ethusdt/1w`
+
+Only `1d` and `1w` are supported right now. Other chart timeframes are intentionally out of scope until the 1:1 validation work is stable.
+
+Legacy aliases still exist for compatibility (`/coinglass`, `/heatmap_30d.html`, `/liq_map_1w.html`), but they should no longer be treated as primary entrypoints.
 
 ## Architecture
 
@@ -78,6 +120,9 @@ uv sync
 # Copy environment template
 cp .env.example .env
 # Edit .env with your configuration
+
+# Primary runtime settings are loaded from src/liquidationheatmap/settings.py
+# and overridden via HEATMAP_* / CORS_* / RATE_LIMIT_* / LH_CACHE_* env vars
 ```
 
 ### Testing
@@ -124,12 +169,14 @@ See `docs/DATA_VALIDATION.md` for detailed documentation.
 
 ```
 LiquidationHeatmap/
+├── archive/          # Historical reports and deprecated templates
 ├── src/              # Core application code
 ├── tests/            # Test suite
 ├── scripts/          # Utilities and batch jobs
 │   ├── ingest_aggtrades.py        # Streaming ingestion
 │   ├── check_ingestion_ready.py   # Pre-flight checks (production)
 │   ├── validate_aggtrades.py      # Data quality validation
+│   ├── lib/runtime_env.sh         # Shared shell runtime config
 │   ├── migrate_add_unique_constraint.py     # Duplicate prevention
 │   └── migrate_add_metadata_tracking.py     # Metadata logging
 ├── docs/             # Documentation
@@ -139,7 +186,8 @@ LiquidationHeatmap/
 │   ├── raw/          # Symlink to 3TB-WDC (read-only)
 │   └── cache/        # Temporary cache
 # Database: /media/sam/2TB-NVMe/liquidationheatmap_db/ (external NVMe)
-├── frontend/         # Visualization (if applicable)
+├── frontend/         # Active UI pages + compatibility wrappers
+│   └── legacy/       # Archived frontend implementations
 ├── CLAUDE.md         # Development guide for Claude Code
 ├── README.md         # This file
 └── pyproject.toml    # Dependencies (UV)
@@ -174,7 +222,7 @@ volume_at_price = current_OI × (whale_volume_at_price / total_whale_volume)
 
 **API Usage**:
 ```bash
-curl "http://localhost:8888/liquidations/levels?symbol=BTCUSDT&model=openinterest&timeframe=30"
+curl "http://localhost:8002/liquidations/levels?symbol=BTCUSDT&model=openinterest&timeframe=7"
 ```
 
 ### Binance Standard Model (Legacy)
@@ -183,7 +231,7 @@ Direct calculation from aggTrades history. May overestimate volumes by ~17x comp
 
 **API Usage**:
 ```bash
-curl "http://localhost:8888/liquidations/levels?symbol=BTCUSDT&model=binance_standard&timeframe=30"
+curl "http://localhost:8002/liquidations/levels?symbol=BTCUSDT&model=binance_standard&timeframe=7"
 ```
 
 ---
@@ -213,6 +261,13 @@ Expected output:
 Creating volume_profile_daily table...
 ✅ Created volume_profile_daily with 7,345 rows
 ```
+
+## Archive
+
+Historical reports, session notes, and deprecated config templates are archived outside the repository root:
+
+- `archive/reports/`
+- `archive/config/`
 
 **Cache Stats**:
 - Rows: ~7,345 (from 1.9B raw trades)
@@ -302,10 +357,10 @@ GET /liquidations/history?symbol=BTCUSDT&aggregate=true&start=2024-10-29T18:00:0
 **Examples**:
 ```bash
 # Aggregated data for time-series
-curl "http://localhost:8000/liquidations/history?symbol=BTCUSDT&aggregate=true"
+curl "http://localhost:8002/liquidations/history?symbol=BTCUSDT&aggregate=true"
 
 # Raw records with date filtering
-curl "http://localhost:8000/liquidations/history?symbol=BTCUSDT&start=2024-10-01&end=2024-10-31"
+curl "http://localhost:8002/liquidations/history?symbol=BTCUSDT&start=2024-10-01&end=2024-10-31"
 ```
 
 #### 4. Liquidation Heatmap
@@ -321,29 +376,24 @@ GET /liquidations/heatmap?symbol=BTCUSDT&model=binance_standard
 
 **Examples**:
 ```bash
-curl "http://localhost:8000/liquidations/heatmap?symbol=BTCUSDT&model=ensemble"
-curl "http://localhost:8000/liquidations/heatmap?symbol=ETHUSDT&model=binance_standard"
+curl "http://localhost:8002/liquidations/heatmap?symbol=BTCUSDT&model=ensemble"
+curl "http://localhost:8002/liquidations/heatmap?symbol=ETHUSDT&model=binance_standard"
 ```
 
-## Frontend Visualizations
+## Frontend Entry Points
 
-### 1. Liquidation Map
-```bash
-open frontend/liquidation_map.html
-```
-Bar chart showing liquidation levels by price and leverage tier (Coinglass-style).
+Active UI targets:
 
-### 2. Historical Liquidations
-```bash
-open frontend/historical_liquidations.html
-```
-Time-series chart of liquidation volume over time with dual-axis (longs/shorts).
+- `http://localhost:8002/chart/derivatives/liq-map/binance/btcusdt/1d`
+- `http://localhost:8002/chart/derivatives/liq-map/binance/btcusdt/1w`
+- `http://localhost:8002/chart/derivatives/liq-map/binance/ethusdt/1d`
+- `http://localhost:8002/chart/derivatives/liq-map/binance/ethusdt/1w`
+- `http://localhost:8002/chart/derivatives/liq-heat-map/btcusdt/1d`
+- `http://localhost:8002/chart/derivatives/liq-heat-map/btcusdt/1w`
+- `http://localhost:8002/chart/derivatives/liq-heat-map/ethusdt/1d`
+- `http://localhost:8002/chart/derivatives/liq-heat-map/ethusdt/1w`
 
-### 3. Liquidation Heatmap
-```bash
-open frontend/heatmap.html
-```
-2D heatmap (time × price) showing liquidation density with color gradient.
+Legacy frontend implementations are archived under `frontend/legacy/`. The legacy filenames left in `frontend/` are compatibility wrappers only.
 
 ## Features
 

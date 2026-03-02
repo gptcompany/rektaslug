@@ -8,10 +8,10 @@ START_DATE="$1"
 END_DATE="$2"
 MODE="$3"
 
-PROJECT_DIR="/workspace/1TB/LiquidationHeatmap"
-# NVMe database for faster I/O (migrated from HDD 2025-01-01)
-DB_PATH="/workspace/2TB-NVMe/liquidationheatmap_db/liquidations.duckdb"
-API_URL="http://host.docker.internal:8000"
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+PROJECT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+. "$PROJECT_DIR/scripts/lib/runtime_env.sh"
+lh_load_runtime_env container
 
 cd "$PROJECT_DIR"
 
@@ -94,7 +94,7 @@ $PYTHON_CMD scripts/ingest_klines_15m.py \
     --start-date "$START_DATE" \
     --end-date "$END_DATE" \
     --interval 5m \
-    --data-dir /workspace/3TB-WDC/binance-history-data-downloader/data
+    --data-dir "$DATA_DIR"
 KLINES_5M_BTC=$?
 
 echo ""
@@ -104,7 +104,7 @@ $PYTHON_CMD scripts/ingest_klines_15m.py \
     --start-date "$START_DATE" \
     --end-date "$END_DATE" \
     --interval 5m \
-    --data-dir /workspace/3TB-WDC/binance-history-data-downloader/data
+    --data-dir "$DATA_DIR"
 KLINES_5M_ETH=$?
 
 echo ""
@@ -114,7 +114,7 @@ $PYTHON_CMD scripts/ingest_klines_15m.py \
     --start-date "$START_DATE" \
     --end-date "$END_DATE" \
     --interval 15m \
-    --data-dir /workspace/3TB-WDC/binance-history-data-downloader/data
+    --data-dir "$DATA_DIR"
 KLINES_15M_BTC=$?
 
 echo ""
@@ -124,7 +124,7 @@ $PYTHON_CMD scripts/ingest_klines_15m.py \
     --start-date "$START_DATE" \
     --end-date "$END_DATE" \
     --interval 15m \
-    --data-dir /workspace/3TB-WDC/binance-history-data-downloader/data
+    --data-dir "$DATA_DIR"
 KLINES_15M_ETH=$?
 
 # Notify API to refresh connections

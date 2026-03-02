@@ -21,6 +21,7 @@ venv/
 .vscode/
 *.swp
 .claude-flow/
+.serena/
 
 # Cache & test artifacts
 .pytest_cache/
@@ -37,6 +38,7 @@ tests/integration/screenshots/
 # Logs
 test_output.log
 logs/
+elementi.png
 
 # Validation artifacts
 data/validation/liqmap/*.png
