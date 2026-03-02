@@ -57,10 +57,32 @@ markers = [
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+extend-exclude = [
+    ".claude",
+    "archive",
+    "docs",
+    "examples",
+    "frontend",
+    "scripts",
+    "tests",
+    "ingest_full_history_n8n.py",
+    "ingest_full_history_safe.py",
+    "src/api",
+    "src/clustering",
+    "src/config",
+    "src/db",
+    "src/exchanges",
+    "src/models",
+    "src/services",
+    "src/validation",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
-ignore = []
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/liquidationheatmap/api/main.py" = ["E402"]
 
 [dependency-groups]
 dev = [

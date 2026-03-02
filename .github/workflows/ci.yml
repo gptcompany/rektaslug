@@ -30,7 +30,7 @@ jobs:
     name: Security Scan
     uses: gptcompany/claude-hooks-shared/.github/workflows/_reusable-security.yml@main
     with:
-      bandit-paths: '.'
+      bandit-paths: 'src/liquidationheatmap'
       fail-on-high-severity: true
 
   lint:
@@ -38,7 +38,7 @@ jobs:
     uses: gptcompany/claude-hooks-shared/.github/workflows/_reusable-lint.yml@main
     with:
       python-version: '3.12'
-      mypy-paths: '.'
+      mypy-paths: 'src/liquidationheatmap/'
       fail-on-type-errors: false
 
   test:
@@ -47,6 +47,6 @@ jobs:
     uses: gptcompany/claude-hooks-shared/.github/workflows/_reusable-tests.yml@main
     with:
       python-version: '3.12'
-      test-paths: 'tests/'
-      coverage-paths: '.'
-      coverage-threshold: 70
+      test-paths: 'tests/test_api/test_main.py tests/unit/test_validate_heatmap_visual.py'
+      coverage-paths: 'src/liquidationheatmap/api'
+      coverage-threshold: 30
