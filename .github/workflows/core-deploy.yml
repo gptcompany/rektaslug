@@ -64,56 +64,19 @@ jobs:
   deploy:
     name: Deploy Core
     needs: build-and-publish
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 10
 
     steps:
-      - name: Detect deploy configuration
-        id: cfg
-        env:
-          CORE_DEPLOY_HOST: ${{ secrets.CORE_DEPLOY_HOST }}
-          CORE_DEPLOY_USER: ${{ secrets.CORE_DEPLOY_USER }}
-          CORE_DEPLOY_PATH: ${{ secrets.CORE_DEPLOY_PATH }}
-          CORE_DEPLOY_SSH_KEY: ${{ secrets.CORE_DEPLOY_SSH_KEY }}
-          CORE_DEPLOY_GHCR_USER: ${{ secrets.CORE_DEPLOY_GHCR_USER }}
-          CORE_DEPLOY_GHCR_TOKEN: ${{ secrets.CORE_DEPLOY_GHCR_TOKEN }}
-        run: |
-          if [ -n "$CORE_DEPLOY_HOST" ] && [ -n "$CORE_DEPLOY_USER" ] && [ -n "$CORE_DEPLOY_PATH" ] && [ -n "$CORE_DEPLOY_SSH_KEY" ] && [ -n "$CORE_DEPLOY_GHCR_USER" ] && [ -n "$CORE_DEPLOY_GHCR_TOKEN" ]; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-          fi
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Deploy over SSH
-        if: steps.cfg.outputs.enabled == 'true'
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.CORE_DEPLOY_HOST }}
-          username: ${{ secrets.CORE_DEPLOY_USER }}
-          key: ${{ secrets.CORE_DEPLOY_SSH_KEY }}
-          script: |
-            set -euo pipefail
-            echo "${{ secrets.CORE_DEPLOY_GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.CORE_DEPLOY_GHCR_USER }}" --password-stdin
-            cd "${{ secrets.CORE_DEPLOY_PATH }}"
-            git fetch origin
-            git checkout master
-            git pull --ff-only origin master
-            bash ./scripts/deploy-core.sh
-            docker image prune -f
-
-      - name: Publish deploy summary
-        if: steps.cfg.outputs.enabled != 'true'
+      - name: Pull and restart containers
         run: |
-          {
-            echo "## Core Deploy"
-            echo
-            echo "Image build/publish completed."
-            echo "Remote deploy was skipped because the required deployment secrets are not configured."
-            echo
-            echo "Required secrets:"
-            echo "- CORE_DEPLOY_HOST"
-            echo "- CORE_DEPLOY_USER"
-            echo "- CORE_DEPLOY_PATH"
-            echo "- CORE_DEPLOY_SSH_KEY"
-            echo "- CORE_DEPLOY_GHCR_USER"
-            echo "- CORE_DEPLOY_GHCR_TOKEN"
-          } >> "$GITHUB_STEP_SUMMARY"
+          set -euo pipefail
+          cd /media/sam/1TB/rektaslug
+          git fetch origin
+          git checkout master
+          git pull --ff-only origin master
+          bash ./scripts/deploy-core.sh
+          docker image prune -f
