@@ -14,7 +14,7 @@
     <div id="liquidation-map" style="width: 100%; height: 600px;"></div>
 
     <script>
-        // 3 Leverage groups (Coinank style)
+        // 3 Leverage groups (Coinank style) - hex for solid legend, opacity set on marker
         const LEVERAGE_GROUPS = {
             'Low leverage':    { tiers: ['5x', '10x'],   color: '#5B8FF9' },
             'Medium leverage': { tiers: ['25x', '50x'],  color: '#B37FEB' },
@@ -105,7 +105,7 @@
                     y: longLevels.map(l => l.volume),
                     type: 'bar',
                     name: groupName,
-                    marker: { color: groupDef.color },
+                    marker: { color: groupDef.color, opacity: 0.6 },
                     hovertemplate: `Price: %{x}<br>Volume: %{y:.2f}<br>${groupName}<extra></extra>`,
                     legendgroup: groupName,
                     showlegend: true,
@@ -121,7 +121,7 @@
                     y: shortLevels.map(l => l.volume),
                     type: 'bar',
                     name: groupName,
-                    marker: { color: groupDef.color },
+                    marker: { color: groupDef.color, opacity: 0.6 },
                     hovertemplate: `Price: %{x}<br>Volume: %{y:.2f}<br>${groupName}<extra></extra>`,
                     legendgroup: groupName,
                     showlegend: false,
@@ -130,6 +130,15 @@
             }
 
             return traces;
+        }
+
+        // Format financial ticks: use B (billion) instead of G (giga), with 2 decimals
+        function formatFinancialValue(val) {
+            const abs = Math.abs(val);
+            if (abs >= 1e9) return (val / 1e9).toFixed(2) + 'B';
+            if (abs >= 1e6) return (val / 1e6).toFixed(2) + 'M';
+            if (abs >= 1e3) return (val / 1e3).toFixed(2) + 'K';
+            return val.toFixed(2);
         }
 
         function renderLiquidationMap(data, symbol) {
@@ -196,30 +205,39 @@
                 yaxis: 'y'
             });
 
+            // Auto-zoom: center on current price ±15%
+            const priceRange = currentPrice * 0.15;
+            const xMin = currentPrice - priceRange;
+            const xMax = currentPrice + priceRange;
+
             const layout = {
                 xaxis: {
-                    showgrid: true,
-                    gridcolor: '#f0f0f0',
+                    showgrid: false,
                     tickformat: '.0f',
+                    range: [xMin, xMax],
                     rangeslider: { visible: true, thickness: 0.05 }
                 },
                 yaxis: {
                     showgrid: true,
-                    gridcolor: '#f0f0f0',
+                    gridcolor: '#e8e8e8',
                     side: 'left',
-                    tickformat: '.2s'
+                    rangemode: 'tozero',
+                    tickvals: [],
+                    ticktext: []
                 },
                 yaxis2: {
                     overlaying: 'y',
                     side: 'right',
                     showgrid: false,
-                    tickformat: '.2s'
+                    rangemode: 'tozero',
+                    tickvals: [],
+                    ticktext: []
                 },
                 paper_bgcolor: '#ffffff',
                 plot_bgcolor: '#ffffff',
-                font: { color: '#333333', family: 'Arial, sans-serif' },
+                font: { color: '#666666', family: 'Arial, sans-serif', size: 11 },
                 barmode: 'stack',
-                bargap: 0.1,
+                bargap: 0.02,
                 legend: {
                     orientation: 'h',
                     yanchor: 'bottom',
@@ -238,24 +256,62 @@
                     y0: 0, y1: 1, yref: 'paper',
                     line: { color: '#ff0000', width: 1.5, dash: 'dash' }
                 }],
-                // Current price: annotation label above chart
-                annotations: [{
-                    x: currentPrice,
-                    y: 1.06,
-                    xref: 'x',
-                    yref: 'paper',
-                    text: `Current Price\uff1a${Math.round(currentPrice)}`,
-                    showarrow: true,
-                    arrowhead: 2,
-                    arrowcolor: '#ff0000',
-                    arrowwidth: 2,
-                    ax: 0,
-                    ay: 25,
-                    font: { color: '#333', size: 13 }
-                }]
+                annotations: [
+                    // Current price: upward arrow at top of dashed line
+                    {
+                        x: currentPrice,
+                        y: 1.0,
+                        xref: 'x',
+                        yref: 'paper',
+                        text: '',
+                        showarrow: true,
+                        arrowhead: 2,
+                        arrowsize: 1.5,
+                        arrowcolor: '#ff0000',
+                        arrowwidth: 2,
+                        ax: 0,
+                        ay: 20
+                    },
+                    // Current price: text label above chart
+                    {
+                        x: currentPrice,
+                        y: 1.08,
+                        xref: 'x',
+                        yref: 'paper',
+                        text: `Current Price\uff1a${Math.round(currentPrice)}`,
+                        showarrow: false,
+                        font: { color: '#333', size: 13 }
+                    }
+                ]
             };
 
-            Plotly.newPlot('liquidation-map', traces, layout, {responsive: true});
+            Plotly.newPlot('liquidation-map', traces, layout, {responsive: true}).then(gd => {
+                // Generate custom Y-axis ticks with B/M format after plot renders
+                const yRange = gd._fullLayout.yaxis.range;
+                const y2Range = gd._fullLayout.yaxis2.range;
+
+                function makeTicks(min, max, count) {
+                    const step = (max - min) / count;
+                    const vals = [];
+                    const texts = [];
+                    for (let i = 0; i <= count; i++) {
+                        const v = min + step * i;
+                        vals.push(v);
+                        texts.push(formatFinancialValue(v));
+                    }
+                    return { tickvals: vals, ticktext: texts };
+                }
+
+                const y1Ticks = makeTicks(yRange[0], yRange[1], 6);
+                const y2Ticks = makeTicks(y2Range[0], y2Range[1], 6);
+
+                Plotly.relayout(gd, {
+                    'yaxis.tickvals': y1Ticks.tickvals,
+                    'yaxis.ticktext': y1Ticks.ticktext,
+                    'yaxis2.tickvals': y2Ticks.tickvals,
+                    'yaxis2.ticktext': y2Ticks.ticktext
+                });
+            });
         }
 
         function calculateCumulative(liquidations, allPrices, currentPrice, isLong = false) {
