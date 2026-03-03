@@ -89,7 +89,7 @@ python3 ingest_full_history_safe.py \
 
 **Utilizzo**:
 ```bash
-cd /media/sam/1TB/LiquidationHeatmap
+cd /media/sam/1TB/rektaslug
 ./scripts/cleanup_stuck_processes.sh
 ```
 
@@ -195,12 +195,12 @@ Prossima esecuzione:
 docker exec n8n-n8n-1 ps aux | grep XXXX
 
 # 2. Se stuck, usa cleanup script
-cd /media/sam/1TB/LiquidationHeatmap
+cd /media/sam/1TB/rektaslug
 ./scripts/cleanup_stuck_processes.sh
 
 # 3. Oppure manuale
 docker exec n8n-n8n-1 kill -9 XXXX
-rm /media/sam/1TB/LiquidationHeatmap//media/sam/2TB-NVMe/liquidationheatmap_db/liquidations.duckdb.pid
+rm /media/sam/1TB/rektaslug//media/sam/2TB-NVMe/liquidationheatmap_db/liquidations.duckdb.pid
 ```
 
 ### "DuckDB WAL file exists"

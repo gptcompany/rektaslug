@@ -619,7 +619,7 @@ Primary runtime settings are centralized in `src/liquidationheatmap/settings.py`
 HEATMAP_HOST=0.0.0.0
 HEATMAP_PORT=8002
 HEATMAP_API_URL=http://localhost:8002
-HEATMAP_PROJECT_ROOT=/media/sam/1TB/LiquidationHeatmap
+HEATMAP_PROJECT_ROOT=/media/sam/1TB/rektaslug
 HEATMAP_DB_PATH=/media/sam/2TB-NVMe/liquidationheatmap_db/liquidations.duckdb
 HEATMAP_DATA_DIR=/media/sam/3TB-WDC/binance-history-data-downloader/data
 

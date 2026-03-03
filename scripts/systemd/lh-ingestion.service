@@ -7,15 +7,15 @@ Wants=network-online.target
 Type=oneshot
 User=sam
 Group=sam
-WorkingDirectory=/media/sam/1TB/LiquidationHeatmap
-EnvironmentFile=-/media/sam/1TB/LiquidationHeatmap/.env
+WorkingDirectory=/media/sam/1TB/rektaslug
+EnvironmentFile=-/media/sam/1TB/rektaslug/.env
 
 # Environment
 Environment=QUESTDB_HOST=localhost
 Environment=QUESTDB_PORT=9009
 Environment=PATH=/home/sam/.local/bin:/home/sam/.cargo/bin:/usr/local/bin:/usr/bin:/bin
 
-ExecStart=/media/sam/1TB/monitoring-stack/scripts/cron-wrapper.sh lh-ingestion /media/sam/1TB/LiquidationHeatmap/scripts/run-ingestion.sh
+ExecStart=/media/sam/1TB/monitoring-stack/scripts/cron-wrapper.sh lh-ingestion /media/sam/1TB/rektaslug/scripts/run-ingestion.sh
 
 # Timeout (1h — ingestion is faster than download)
 TimeoutStartSec=3600

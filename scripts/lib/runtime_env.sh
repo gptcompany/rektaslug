@@ -54,9 +54,9 @@ lh_load_runtime_env() {
     if [ -n "${PROJECT_DIR:-}" ]; then
         base_project_dir="$PROJECT_DIR"
     elif [ "$profile" = "container" ]; then
-        base_project_dir="${HEATMAP_CONTAINER_PROJECT_ROOT:-/workspace/1TB/LiquidationHeatmap}"
+        base_project_dir="${HEATMAP_CONTAINER_PROJECT_ROOT:-/workspace/1TB/rektaslug}"
     else
-        base_project_dir="${HEATMAP_PROJECT_ROOT:-/media/sam/1TB/LiquidationHeatmap}"
+        base_project_dir="${HEATMAP_PROJECT_ROOT:-/media/sam/1TB/rektaslug}"
     fi
 
     env_file="${HEATMAP_ENV_FILE:-${base_project_dir}/.env}"

@@ -49,7 +49,7 @@ class AppSettings:
             port=port,
             api_url=os.getenv("HEATMAP_API_URL", f"http://127.0.0.1:{port}"),
             project_root=Path(
-                os.getenv("HEATMAP_PROJECT_ROOT", "/media/sam/1TB/LiquidationHeatmap")
+                os.getenv("HEATMAP_PROJECT_ROOT", "/media/sam/1TB/rektaslug")
             ),
             data_dir=Path(
                 os.getenv(

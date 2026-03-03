@@ -7,10 +7,10 @@ Wants=network-online.target
 Type=oneshot
 User=sam
 Group=sam
-WorkingDirectory=/media/sam/1TB/LiquidationHeatmap
-EnvironmentFile=-/media/sam/1TB/LiquidationHeatmap/.env
+WorkingDirectory=/media/sam/1TB/rektaslug
+EnvironmentFile=-/media/sam/1TB/rektaslug/.env
 Environment=PATH=/home/sam/.local/bin:/home/sam/.cargo/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=/media/sam/1TB/monitoring-stack/scripts/cron-wrapper.sh lh-ccxt-gap-fill /media/sam/1TB/LiquidationHeatmap/scripts/run-ccxt-gap-fill.sh
+ExecStart=/media/sam/1TB/monitoring-stack/scripts/cron-wrapper.sh lh-ccxt-gap-fill /media/sam/1TB/rektaslug/scripts/run-ccxt-gap-fill.sh
 TimeoutStartSec=300
 Restart=no
 StandardOutput=journal

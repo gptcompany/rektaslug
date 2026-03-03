@@ -195,7 +195,7 @@ class TestFillKlines:
         import importlib.util
 
         spec = importlib.util.spec_from_file_location(
-            "fill_gap", "/media/sam/1TB/LiquidationHeatmap/scripts/fill_gap_from_ccxt.py"
+            "fill_gap", "/media/sam/1TB/rektaslug/scripts/fill_gap_from_ccxt.py"
         )
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
@@ -231,7 +231,7 @@ class TestFillKlines:
         import importlib.util
 
         spec = importlib.util.spec_from_file_location(
-            "fill_gap", "/media/sam/1TB/LiquidationHeatmap/scripts/fill_gap_from_ccxt.py"
+            "fill_gap", "/media/sam/1TB/rektaslug/scripts/fill_gap_from_ccxt.py"
         )
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
@@ -256,7 +256,7 @@ class TestFillKlines:
         import importlib.util
 
         spec = importlib.util.spec_from_file_location(
-            "fill_gap", "/media/sam/1TB/LiquidationHeatmap/scripts/fill_gap_from_ccxt.py"
+            "fill_gap", "/media/sam/1TB/rektaslug/scripts/fill_gap_from_ccxt.py"
         )
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
@@ -278,7 +278,7 @@ class TestFillOpenInterest:
         import importlib.util
 
         spec = importlib.util.spec_from_file_location(
-            "fill_gap", "/media/sam/1TB/LiquidationHeatmap/scripts/fill_gap_from_ccxt.py"
+            "fill_gap", "/media/sam/1TB/rektaslug/scripts/fill_gap_from_ccxt.py"
         )
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
@@ -309,7 +309,7 @@ class TestFillOpenInterest:
         import importlib.util
 
         spec = importlib.util.spec_from_file_location(
-            "fill_gap", "/media/sam/1TB/LiquidationHeatmap/scripts/fill_gap_from_ccxt.py"
+            "fill_gap", "/media/sam/1TB/rektaslug/scripts/fill_gap_from_ccxt.py"
         )
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
@@ -337,7 +337,7 @@ class TestFillFundingRate:
         import importlib.util
 
         spec = importlib.util.spec_from_file_location(
-            "fill_gap", "/media/sam/1TB/LiquidationHeatmap/scripts/fill_gap_from_ccxt.py"
+            "fill_gap", "/media/sam/1TB/rektaslug/scripts/fill_gap_from_ccxt.py"
         )
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
@@ -370,7 +370,7 @@ class TestDryRun:
         import importlib.util
 
         spec = importlib.util.spec_from_file_location(
-            "fill_gap", "/media/sam/1TB/LiquidationHeatmap/scripts/fill_gap_from_ccxt.py"
+            "fill_gap", "/media/sam/1TB/rektaslug/scripts/fill_gap_from_ccxt.py"
         )
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
@@ -411,7 +411,7 @@ class TestGapValidation:
         import importlib.util
 
         spec = importlib.util.spec_from_file_location(
-            "fill_gap", "/media/sam/1TB/LiquidationHeatmap/scripts/fill_gap_from_ccxt.py"
+            "fill_gap", "/media/sam/1TB/rektaslug/scripts/fill_gap_from_ccxt.py"
         )
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)

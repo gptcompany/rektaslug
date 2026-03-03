@@ -23,7 +23,7 @@ from typing import List, Tuple
 import duckdb
 
 # Adjust path for imports
-sys.path.insert(0, "/media/sam/1TB/LiquidationHeatmap")
+sys.path.insert(0, "/media/sam/1TB/rektaslug")
 
 from src.liquidationheatmap.ingestion.aggtrades_streaming import load_aggtrades_streaming
 
