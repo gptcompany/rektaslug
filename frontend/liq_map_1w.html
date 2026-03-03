@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Liquidation Map - 1 Week (Binance)</title>
     <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="/frontend/styles.css">
 </head>
 <body style="background: #fff; margin: 0; padding: 0;">
     <h1 id="pageTitle" style="display: none;"></h1>
@@ -21,12 +21,20 @@
             'High leverage':   { tiers: ['100x'],         color: '#FF9C6E' }
         };
 
+        // Parse params from Coinank-style path OR query string (backward compat)
+        // Path: /chart/derivatives/liq-map/{exchange}/{symbol}/{timeframe}
+        const _pathParts = window.location.pathname.split('/');
+        const _isCoinankPath = _pathParts[1] === 'chart' && _pathParts[3] === 'liq-map';
+        const _TIMEFRAME_DAYS = { '1d': 1, '1w': 7 };
+
         function getSymbol() {
+            if (_isCoinankPath && _pathParts[5]) return _pathParts[5].toUpperCase();
             const urlParams = new URLSearchParams(window.location.search);
             return urlParams.get('symbol') || 'BTCUSDT';
         }
 
         function getExchange() {
+            if (_isCoinankPath && _pathParts[4]) return _pathParts[4].toLowerCase();
             const urlParams = new URLSearchParams(window.location.search);
             return (urlParams.get('exchange') || 'binance').toLowerCase();
         }
@@ -36,6 +44,9 @@
         }
 
         function getTimeframeDays() {
+            if (_isCoinankPath && _pathParts[6]) {
+                return _TIMEFRAME_DAYS[_pathParts[6].toLowerCase()] || 7;
+            }
             const urlParams = new URLSearchParams(window.location.search);
             const days = parseInt(urlParams.get('days') || '7', 10);
             return days === 1 ? 1 : 7;

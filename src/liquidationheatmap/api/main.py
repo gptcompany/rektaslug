@@ -352,10 +352,12 @@ async def liq_map_1w_symbol(symbol: str):
 
 
 @app.get("/chart/derivatives/liq-map/{exchange}/{symbol}/{timeframe}")
-async def liq_map_coinank_style(exchange: str, symbol: str, timeframe: str, request: Request):
-    """Coinank-style liq-map route: /chart/derivatives/liq-map/binance/btcusdt/1w"""
-    from fastapi.responses import RedirectResponse
+async def liq_map_coinank_style(exchange: str, symbol: str, timeframe: str):
+    """Serve liq-map directly at Coinank-style URL (no redirect).
 
+    URL pattern: /chart/derivatives/liq-map/binance/btcusdt/1w
+    Frontend JS parses exchange/symbol/timeframe from pathname.
+    """
     normalized_exchange = exchange.lower()
     if normalized_exchange not in SUPPORTED_EXCHANGES:
         raise HTTPException(
@@ -374,14 +376,7 @@ async def liq_map_coinank_style(exchange: str, symbol: str, timeframe: str, requ
             ),
         )
 
-    chart_mode = request.query_params.get("chart")
-    redirect_url = (
-        f"/liq_map_1w.html?exchange={normalized_exchange}&symbol={symbol.upper()}"
-        f"&days={LIQ_MAP_TIMEFRAME_TO_DAYS[normalized_timeframe]}"
-    )
-    if chart_mode:
-        redirect_url = f"{redirect_url}&chart={chart_mode}"
-    return RedirectResponse(url=redirect_url)
+    return FileResponse("frontend/liq_map_1w.html")
 
 
 @app.get("/chart/derivatives/liq-heat-map/{symbol}/{timeframe}")

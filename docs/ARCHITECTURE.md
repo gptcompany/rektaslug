@@ -1,7 +1,7 @@
 # LiquidationHeatmap Architecture
 
 > **Note**: Canonical architecture source. Auto-updated by architecture-validator.
-> Last generated: 2025-12-27
+> Last generated: 2026-03-03
 
 ## Overview
 
@@ -196,9 +196,10 @@ CREATE TABLE volume_profile_daily (
 - Uses official Binance liquidation formulas
 - Supports 10 maintenance margin rate (MMR) tiers
 - Handles both synthetic binning and real trade data
-- **Formulas**:
-  - Long: `liq_price = entry × (1 - 1/leverage + mmr/leverage)`
-  - Short: `liq_price = entry × (1 + 1/leverage - mmr/leverage)`
+- **Formulas** (corrected 2026-03-03, matches Binance official docs):
+  - Long: `liq_price = entry × (1 - 1/leverage + mmr)`
+  - Short: `liq_price = entry × (1 + 1/leverage - mmr)`
+  - Note: MMR is applied directly, NOT divided by leverage. Previous `mmr/leverage` was incorrect.
 
 #### FundingAdjustedModel (`src/liquidationheatmap/models/funding_adjusted.py`)
 - Adjusts positions based on funding rate bias
@@ -251,19 +252,37 @@ ClusterParameters(
 
 **Endpoints**:
 ```
-GET  /health                          # API health check
-GET  /liquidations/levels              # Current liquidation levels
-GET  /liquidations/history             # Historical liquidations
-GET  /liquidations/heatmap             # Time×price heatmap data
-POST /api/margin/calculate             # Margin calculation
-GET  /api/margin/tiers/{symbol}        # Tier configuration
+GET  /health                                                    # API health check
+GET  /liquidations/levels?symbol=X&model=openinterest&timeframe=N  # Liquidation levels (OI-based)
+GET  /liquidations/history                                      # Historical liquidations
+GET  /liquidations/heatmap                                      # Time×price heatmap data
+POST /api/margin/calculate                                      # Margin calculation
+GET  /api/margin/tiers/{symbol}                                 # Tier configuration
+GET  /api/v1/prepare-for-ingestion                              # Pre-ingestion API teardown
+GET  /api/v1/refresh-connections                                # Post-ingestion reconnect
 ```
+
+**Coinank-Style Frontend Routes** (served directly, no redirect):
+```
+GET  /chart/derivatives/liq-map/{exchange}/{symbol}/{timeframe}   # Liq-map page (1d, 1w)
+GET  /chart/derivatives/liq-heat-map/{symbol}/{timeframe}         # Heatmap page
+GET  /liq_map_1w.html                                             # Legacy direct (backward compat)
+```
+- URL pattern mirrors Coinank: `/chart/derivatives/liq-map/binance/btcusdt/1w`
+- Frontend JS parses exchange/symbol/timeframe from pathname OR query string
+- `FileResponse` serves `frontend/liq_map_1w.html` directly (HTTP 200, no 307 redirect)
 
 **Caching Strategy**:
 - In-memory cache with 5-minute TTL
 - Cache key: `symbol:start:end:interval:bin_size:weights`
 - Evicts oldest entries at max size (100 entries)
 - Logs hit/miss ratio for monitoring
+
+**DuckDB Ingestion Lock**:
+- File-based lock at `/tmp/duckdb-ingestion.lock` (single-writer enforcement)
+- Auto-expires after 30 minutes to prevent stale locks from crashed ingestion jobs
+- API returns `IngestionLockError` (HTTP 503) when lock is active
+- Implementation: `DuckDBService.is_ingestion_locked()` in `db_service.py`
 
 ### 5. Funding Rate Service
 
@@ -303,16 +322,34 @@ GET  /api/margin/tiers/{symbol}        # Tier configuration
 **Purpose**: Interactive charts for liquidation analysis (no build step).
 
 **Visualizations**:
-1. **Liq-Map Renderer** (`liq_map_1w.html`) - Active canonical liq-map surface for `/chart/derivatives/liq-map/...` (`1d` and `1w` only)
-2. **Heatmap Renderer** (`coinglass_heatmap.html`) - Canonical liq-heat-map surface, implemented but deferred from the current phase-1 validation scope
-3. **Compatibility Wrappers** (`heatmap.html`, `heatmap_30d.html`, `liquidation_map.html`, `historical_liquidations.html`, `compare.html`) - Stable legacy entrypoints retained only for backwards compatibility
-4. **Archived Legacy UIs** (`frontend/legacy/`) - Historical reference implementations kept for comparison, not active delivery
+1. **Liq-Map Renderer** (`frontend/liq_map_1w.html`) - Canonical liq-map chart, 1:1 Coinank visual match target
+2. **Heatmap Renderer** (`frontend/coinglass_heatmap.html`) - Liq-heat-map surface (phase 2 scope)
+3. **Compatibility Wrappers** - Legacy entrypoints for backward compatibility
+4. **Archived Legacy UIs** (`frontend/legacy/`) - Historical reference, not active
+
+**Liq-Map Visual Spec** (targeting 1:1 Coinank match):
+- **Chart type**: Stacked vertical bars (Plotly.js 2.26.0)
+- **3 leverage groups**: Low (#5B8FF9 blue), Medium (#B37FEB purple), High (#FF9C6E orange)
+- **Bar opacity**: 0.6 (semi-transparent bars, solid legend swatches)
+- **Cumulative lines**: Red/pink (long, descending L→R) + Green/cyan (short, ascending L→R)
+- **Cumulative fill**: Semi-transparent area under each curve
+- **Current price**: Red dashed vertical line + arrow + text label ("Current Price：XXXXX")
+- **Y-axis**: Left = liquidation volume (M/B suffix), Right = cumulative scale
+- **X-axis**: Plain numbers (no comma/$ separator), range slider at bottom
+- **Background**: White (#ffffff), horizontal grid only
+- **Legend**: 3 items centered above chart, no axis title labels
+
+**URL Routing**:
+- Served directly at `/chart/derivatives/liq-map/{exchange}/{symbol}/{timeframe}` (HTTP 200)
+- Frontend parses exchange/symbol/timeframe from `window.location.pathname`
+- Falls back to `window.location.search` query params for backward compat
+- No 307 redirect (changed 2026-03-03)
 
 **Tech Stack**:
-- Plotly.js for interactive charts
+- Plotly.js 2.26.0 for interactive charts
 - Vanilla JavaScript (no framework)
 - Fetch API for REST calls
-- Coinglass color scheme (#d9024b, #45bf87, #f0b90b)
+- Coinank color scheme: Low=#5B8FF9, Medium=#B37FEB, High=#FF9C6E
 
 ## Data Flow
 
@@ -409,6 +446,48 @@ GET  /api/margin/tiers/{symbol}        # Tier configuration
 - **Daily cache**: `volume_profile_daily` table (updated 00:05 UTC via cron)
 - **API cache**: In-memory HeatmapCache (5-min TTL, 100 entry limit)
 - **Cluster cache**: LRU cache in ClusteringService (5-min TTL)
+
+## Ingestion Schedule
+
+Two systemd timers manage data freshness:
+
+### 1. CCXT Gap Fill (every 5 minutes)
+
+Near-real-time bridge from ccxt-data-pipeline Parquet catalog into DuckDB (T-2 → T-0).
+
+| Item | Value |
+|------|-------|
+| **Timer** | `scripts/systemd/lh-ccxt-gap-fill.timer` |
+| **Service** | `scripts/systemd/lh-ccxt-gap-fill.service` |
+| **Script** | `scripts/run-ccxt-gap-fill.sh` |
+| **Schedule** | `OnCalendar=*:0/5` (every 5 minutes) |
+| **Jitter** | `RandomizedDelaySec=30` |
+| **Timeout** | 300 seconds |
+| **Data source** | ccxt-data-pipeline Parquet files (`$CCXT_CATALOG`) |
+| **Symbols** | `$SYMBOLS` (default: BTCUSDT ETHUSDT) |
+
+**Flow**:
+1. `POST /api/v1/prepare-for-ingestion` (API releases DuckDB read lock)
+2. `cleanup_duckdb_locks.py` (clear stale WAL/lock files)
+3. Test DuckDB write access (skip if busy)
+4. `fill_gap_from_ccxt.py` (ingest latest Parquet into DuckDB)
+5. `POST /api/v1/refresh-connections` (API reconnects read-only)
+
+**Alternative**: `scripts/run-gapfill-daemon.sh` runs as continuous loop with `REKTSLUG_GAP_FILL_INTERVAL_SECONDS` (default: 300s).
+
+### 2. Daily Historical Ingestion (03:30 UTC)
+
+Bulk ingestion of full Binance historical CSV data.
+
+| Item | Value |
+|------|-------|
+| **Timer** | `scripts/systemd/lh-ingestion.timer` |
+| **Service** | `scripts/systemd/lh-ingestion.service` |
+| **Script** | `scripts/run-ingestion.sh` |
+| **Schedule** | Daily 03:30 UTC (30 min after binance-sync) |
+| **Jitter** | `RandomizedDelaySec=300` (±5 min) |
+| **Timeout** | 1 hour |
+| **Data types** | aggTrades, fundingRate, Open Interest, klines (5m, 15m), metrics |
 
 ## Key Technical Decisions
 
@@ -673,5 +752,5 @@ logger.info("Processing liquidations", extra={
 ---
 
 **Maintained by**: Claude Code architecture-validator
-**Last Updated**: 2026-01-01
-**Version**: 1.1 (NVMe database migration)
+**Last Updated**: 2026-03-03
+**Version**: 1.2 (formula fix, ingestion schedule, Coinank-style routing)
