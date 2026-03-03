@@ -227,17 +227,17 @@ class BinanceStandardModel(AbstractLiquidationModel):
     ) -> Decimal:
         """Calculate long position liquidation price.
 
-        Formula: entry * (1 - 1/leverage + mmr/leverage)
+        Formula: entry * (1 - 1/leverage + mmr)
         """
         leverage_dec = Decimal(str(leverage))
-        return entry_price * (Decimal("1") - Decimal("1") / leverage_dec + mmr / leverage_dec)
+        return entry_price * (Decimal("1") - Decimal("1") / leverage_dec + mmr)
 
     def _calculate_short_liquidation(
         self, entry_price: Decimal, leverage: int, mmr: Decimal
     ) -> Decimal:
         """Calculate short position liquidation price.
 
-        Formula: entry * (1 + 1/leverage - mmr/leverage)
+        Formula: entry * (1 + 1/leverage - mmr)
         """
         leverage_dec = Decimal(str(leverage))
-        return entry_price * (Decimal("1") + Decimal("1") / leverage_dec - mmr / leverage_dec)
+        return entry_price * (Decimal("1") + Decimal("1") / leverage_dec - mmr)

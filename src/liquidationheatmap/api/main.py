@@ -823,11 +823,11 @@ async def get_liquidation_levels(
 
     # Dynamic bin size based on timeframe (Coinglass approach)
     if timeframe <= 7:
-        bin_size = 200.0  # 7d: High granularity
+        bin_size = 100.0  # 7d: High granularity
     elif timeframe <= 30:
-        bin_size = 500.0  # 30d: Medium granularity
+        bin_size = 250.0  # 30d: Medium granularity
     else:  # 90 days
-        bin_size = 1500.0  # 90d: Low granularity
+        bin_size = 500.0  # 90d: Low granularity
 
     # Calculate liquidations using OI-based model
     with DuckDBService(read_only=True) as db:
@@ -1867,8 +1867,6 @@ async def get_heatmap_timeseries(
         # Convert to response format
         response_data = []
         total_consumed = 0
-        total_long = 0.0
-        total_short = 0.0
         all_prices = []
 
         for snapshot in snapshots:
@@ -1894,8 +1892,14 @@ async def get_heatmap_timeseries(
             )
 
             total_consumed += snapshot.positions_consumed
-            total_long += float(snapshot.total_long_volume)
-            total_short += float(snapshot.total_short_volume)
+
+        # Calculate final totals from last snapshot (current state)
+        total_long = 0.0
+        total_short = 0.0
+        if snapshots:
+            last_snapshot = snapshots[-1]
+            total_long = float(last_snapshot.total_long_volume)
+            total_short = float(last_snapshot.total_short_volume)
 
         price_range = {
             "min": min(all_prices) if all_prices else 0,

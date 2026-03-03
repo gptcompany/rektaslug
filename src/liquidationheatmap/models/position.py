@@ -110,8 +110,8 @@ def calculate_liq_price(
 ) -> Decimal:
     """Calculate liquidation price using Binance formula.
 
-    Long:  liq_price = entry_price * (1 - 1/leverage + mmr/leverage)
-    Short: liq_price = entry_price * (1 + 1/leverage - mmr/leverage)
+    Long:  liq_price = entry_price * (1 - 1/leverage + mmr)
+    Short: liq_price = entry_price * (1 + 1/leverage - mmr)
 
     Args:
         entry_price: Position entry price
@@ -124,6 +124,6 @@ def calculate_liq_price(
     """
     lev = Decimal(leverage)
     if side == "long":
-        return entry_price * (1 - 1 / lev + mmr / lev)
+        return entry_price * (1 - 1 / lev + mmr)
     else:  # short
-        return entry_price * (1 + 1 / lev - mmr / lev)
+        return entry_price * (1 + 1 / lev - mmr)
