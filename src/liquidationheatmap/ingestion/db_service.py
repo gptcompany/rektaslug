@@ -2,6 +2,7 @@
 
 import json
 import logging
+import time
 from decimal import Decimal
 from pathlib import Path
 from typing import Tuple
@@ -16,6 +17,8 @@ logger = logging.getLogger(__name__)
 
 # Lock file to prevent API from opening DB during ingestion
 INGESTION_LOCK_FILE = Path("/tmp/duckdb-ingestion.lock")
+# Auto-expire stale locks after this many seconds (30 minutes)
+INGESTION_LOCK_MAX_AGE_SECONDS = 30 * 60
 
 
 class IngestionLockError(Exception):
@@ -151,10 +154,27 @@ class DuckDBService:
     def is_ingestion_locked(cls) -> bool:
         """Check if ingestion lock is active.
 
+        Auto-expires stale locks older than INGESTION_LOCK_MAX_AGE_SECONDS
+        to prevent permanent lockout from failed ingestions.
+
         Returns:
-            True if lock file exists (ingestion in progress)
+            True if lock file exists and is not stale
         """
-        return INGESTION_LOCK_FILE.exists()
+        if not INGESTION_LOCK_FILE.exists():
+            return False
+        try:
+            age = time.time() - INGESTION_LOCK_FILE.stat().st_mtime
+            if age > INGESTION_LOCK_MAX_AGE_SECONDS:
+                logger.warning(
+                    f"Stale ingestion lock detected ({age / 60:.0f}m old, "
+                    f"max {INGESTION_LOCK_MAX_AGE_SECONDS / 60:.0f}m). "
+                    f"Auto-releasing."
+                )
+                INGESTION_LOCK_FILE.unlink(missing_ok=True)
+                return False
+        except OSError:
+            return False
+        return True
 
     @classmethod
     def set_ingestion_lock(cls) -> bool:
@@ -670,8 +690,8 @@ class DuckDBService:
                 t.price as entry_price,
                 l.leverage,
                 CASE
-                    WHEN t.side = 'buy' THEN t.price * (1 - 1.0/l.leverage + {mmr}/l.leverage)
-                    WHEN t.side = 'sell' THEN t.price * (1 + 1.0/l.leverage - {mmr}/l.leverage)
+                    WHEN t.side = 'buy' THEN t.price * (1 - 1.0/l.leverage + {mmr})
+                    WHEN t.side = 'sell' THEN t.price * (1 + 1.0/l.leverage - {mmr})
                 END as liq_price
             FROM aggtrades_history t
             CROSS JOIN leverage_tiers l
@@ -946,8 +966,8 @@ class DuckDBService:
             CROSS JOIN LeverageDistribution ld
         ),
 
-        -- STEP 5b: Calculate liquidation prices using per-bucket MMR
-        -- Key fix: Don't filter by price_bin vs current (that was the bug!)
+        # STEP 5: Calculate liquidation prices
+        # Use base MMR (0.4%) as maps are aggregated and individual position sizes are unknown
         AllLiquidations AS (
             SELECT
                 price_bucket,
@@ -956,15 +976,14 @@ class DuckDBService:
                 volume,
                 CASE
                     WHEN side = 'buy' THEN  -- LONG positions
-                        price_bucket * (1 - 1.0/leverage + mmr/leverage)
+                        price_bucket * (1 - 1.0/leverage + 0.004)
                     WHEN side = 'sell' THEN  -- SHORT positions
-                        price_bucket * (1 + 1.0/leverage - mmr/leverage)
+                        price_bucket * (1 + 1.0/leverage - 0.004)
                 END AS liq_price
             FROM BucketMMR
         )
 
         -- STEP 6: Filter ONLY liquidations "at risk" based on liquidation price vs current
-        -- This is the CORRECT filter (not entry price vs current!)
         SELECT
             price_bucket,
             leverage,
