@@ -20,6 +20,8 @@ import argparse
 import json
 import math
 import sys
+import urllib.parse
+import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -31,6 +33,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts import compare_provider_liquidations as provider_compare
+from src.liquidationheatmap.settings import get_settings
 
 RAW_CAPTURE_ROOT = provider_compare.RAW_CAPTURE_ROOT
 DEFAULT_OUTPUT_DIR = provider_compare.DEFAULT_OUTPUT_DIR
@@ -191,6 +194,14 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         help="Override the DuckDB path. Defaults to the validation DuckDB.",
     )
+    parser.add_argument(
+        "--internal-api-base",
+        help="Override the local API base used to fetch /liquidations/heatmap-timeseries.",
+    )
+    parser.add_argument(
+        "--internal-time-window",
+        help="Override the internal heatmap time_window (e.g. 48h, 7d, 30d, 90d, 180d, 1y).",
+    )
     return parser.parse_args()
 
 
@@ -233,6 +244,88 @@ def choose_capture(
     raise SystemExit(
         f"Could not find {provider} capture matching any of: {', '.join(url_paths)}"
     )
+
+
+def choose_internal_time_window(
+    coinank_timeframe: str | None,
+    coinglass_timeframe: str | None,
+    explicit: str | None,
+) -> str:
+    """Choose the closest internal time_window for the vendor timeframe."""
+    if explicit:
+        return explicit
+
+    mapping = {
+        "1d": "48h",
+        "1 day": "48h",
+        "48h": "48h",
+        "1w": "7d",
+        "7 day": "7d",
+        "7d": "7d",
+        "1m": "30d",
+        "1 month": "30d",
+        "30d": "30d",
+        "3m": "90d",
+        "3 month": "90d",
+        "90d": "90d",
+        "6m": "180d",
+        "6 month": "180d",
+        "180d": "180d",
+        "1y": "1y",
+        "1 year": "1y",
+        "365d": "1y",
+    }
+    for candidate in (coinglass_timeframe, coinank_timeframe):
+        if not candidate:
+            continue
+        resolved = mapping.get(candidate.strip().lower())
+        if resolved:
+            return resolved
+    return "48h"
+
+
+def choose_internal_price_bin_size(
+    coinank_state: ProviderMapState,
+    coinglass_state: ProviderMapState,
+) -> float:
+    """Pick a practical internal price_bin_size anchored to vendor granularity."""
+    candidates = [
+        step
+        for step in (coinank_state.price_step_median, coinglass_state.price_step_median)
+        if step and step > 0
+    ]
+    if not candidates:
+        return 100.0
+    return max(1.0, min(1000.0, round(max(candidates), 2)))
+
+
+def fetch_internal_heatmap_payload(
+    *,
+    api_base: str,
+    symbol: str,
+    time_window: str,
+    price_bin_size: float,
+) -> tuple[dict[str, Any], str]:
+    """Fetch the current internal heatmap-timeseries payload from the local API."""
+    params = urllib.parse.urlencode(
+        {
+            "symbol": symbol,
+            "time_window": time_window,
+            "price_bin_size": f"{price_bin_size:.8g}",
+        }
+    )
+    source_url = f"{api_base.rstrip('/')}/liquidations/heatmap-timeseries?{params}"
+    try:
+        with urllib.request.urlopen(source_url, timeout=120) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except Exception as exc:
+        raise SystemExit(f"Failed to fetch internal heatmap data: {exc}") from exc
+
+    if not isinstance(payload, dict):
+        raise SystemExit("Internal heatmap endpoint returned a non-object payload.")
+    if "data" not in payload or "meta" not in payload:
+        raise SystemExit("Internal heatmap payload is missing `data` or `meta`.")
+    return payload, source_url
 
 
 def extract_coinank_state(
@@ -449,6 +542,71 @@ def extract_coinglass_state(
             for leverage, level_map in sorted(price_by_leverage.items())
         },
         leverage_totals=dict(sorted(leverage_totals.items())),
+        notes=notes,
+    )
+
+
+def extract_internal_state(
+    payload: dict[str, Any],
+    *,
+    source_url: str,
+) -> ProviderMapState:
+    """Extract the latest internal heatmap snapshot into the provider map schema."""
+    meta = payload.get("meta")
+    snapshots = payload.get("data")
+    if not isinstance(meta, dict) or not isinstance(snapshots, list):
+        raise SystemExit("Internal heatmap payload is missing usable `meta`/`data`.")
+    if not snapshots:
+        raise SystemExit("Internal heatmap payload has no snapshots.")
+
+    latest_snapshot = snapshots[-1]
+    if not isinstance(latest_snapshot, dict):
+        raise SystemExit("Internal heatmap latest snapshot is invalid.")
+    levels = latest_snapshot.get("levels")
+    if not isinstance(levels, list):
+        raise SystemExit("Internal heatmap latest snapshot has no `levels` array.")
+
+    total_map: dict[float, float] = {}
+    long_map: dict[float, float] = {}
+    short_map: dict[float, float] = {}
+
+    for level in levels:
+        if not isinstance(level, dict):
+            continue
+        price = provider_compare.safe_float(level.get("price"))
+        if price is None:
+            continue
+        long_value = provider_compare.safe_float(level.get("long_density")) or 0.0
+        short_value = provider_compare.safe_float(level.get("short_density")) or 0.0
+        if long_value > 0:
+            long_map[price] = long_map.get(price, 0.0) + long_value
+        if short_value > 0:
+            short_map[price] = short_map.get(price, 0.0) + short_value
+        total_value = long_value + short_value
+        if total_value > 0:
+            total_map[price] = total_map.get(price, 0.0) + total_value
+
+    if not total_map:
+        raise SystemExit("Internal heatmap latest snapshot has no active price levels.")
+
+    notes = [
+        "Internal state uses the latest /liquidations/heatmap-timeseries snapshot.",
+        "long_density and short_density are active predicted liquidation densities, not vendor-reported executed liquidations.",
+    ]
+
+    return ProviderMapState(
+        provider="internal",
+        source_url=source_url,
+        saved_file="live_api",
+        symbol=meta.get("symbol"),
+        exchange="internal",
+        timeframe=meta.get("interval"),
+        current_price=None,
+        total_map=rounded_map(total_map),
+        long_map=rounded_map(long_map),
+        short_map=rounded_map(short_map),
+        price_by_leverage={},
+        leverage_totals={},
         notes=notes,
     )
 
@@ -969,6 +1127,7 @@ def build_report(
     manifest_paths: list[Path],
     coinank_state: ProviderMapState,
     coinglass_state: ProviderMapState,
+    internal_state: ProviderMapState | None,
     scenarios: list[ScenarioMetrics],
     common_tiers: list[int],
 ) -> dict[str, Any]:
@@ -984,49 +1143,70 @@ def build_report(
         ]
         for state in (coinank_state, coinglass_state)
     }
+    if internal_state is not None:
+        leverage_composition[internal_state.provider] = []
 
     raw_metrics = scenarios[0]
     common_tier_metrics = scenarios[1]
     rebinned_metrics = scenarios[2]
     combined_metrics = scenarios[3]
 
+    providers = {
+        coinank_state.provider: {
+            "source_url": coinank_state.source_url,
+            "saved_file": coinank_state.saved_file,
+            "symbol": coinank_state.symbol,
+            "exchange": coinank_state.exchange,
+            "timeframe": coinank_state.timeframe,
+            "bucket_count": coinank_state.bucket_count,
+            "total_value": coinank_state.total_value,
+            "total_long": coinank_state.total_long,
+            "total_short": coinank_state.total_short,
+            "peak_long": coinank_state.peak_long,
+            "peak_short": coinank_state.peak_short,
+            "current_price": coinank_state.current_price,
+            "price_step_median": coinank_state.price_step_median,
+            "notes": coinank_state.notes,
+        },
+        coinglass_state.provider: {
+            "source_url": coinglass_state.source_url,
+            "saved_file": coinglass_state.saved_file,
+            "symbol": coinglass_state.symbol,
+            "exchange": coinglass_state.exchange,
+            "timeframe": coinglass_state.timeframe,
+            "bucket_count": coinglass_state.bucket_count,
+            "total_value": coinglass_state.total_value,
+            "total_long": coinglass_state.total_long,
+            "total_short": coinglass_state.total_short,
+            "peak_long": coinglass_state.peak_long,
+            "peak_short": coinglass_state.peak_short,
+            "current_price": coinglass_state.current_price,
+            "price_step_median": coinglass_state.price_step_median,
+            "notes": coinglass_state.notes,
+        },
+    }
+    if internal_state is not None:
+        providers[internal_state.provider] = {
+            "source_url": internal_state.source_url,
+            "saved_file": internal_state.saved_file,
+            "symbol": internal_state.symbol,
+            "exchange": internal_state.exchange,
+            "timeframe": internal_state.timeframe,
+            "bucket_count": internal_state.bucket_count,
+            "total_value": internal_state.total_value,
+            "total_long": internal_state.total_long,
+            "total_short": internal_state.total_short,
+            "peak_long": internal_state.peak_long,
+            "peak_short": internal_state.peak_short,
+            "current_price": internal_state.current_price,
+            "price_step_median": internal_state.price_step_median,
+            "notes": internal_state.notes,
+        }
+
     return {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "manifests": [str(path.resolve()) for path in manifest_paths],
-        "providers": {
-            coinank_state.provider: {
-                "source_url": coinank_state.source_url,
-                "saved_file": coinank_state.saved_file,
-                "symbol": coinank_state.symbol,
-                "exchange": coinank_state.exchange,
-                "timeframe": coinank_state.timeframe,
-                "bucket_count": coinank_state.bucket_count,
-                "total_value": coinank_state.total_value,
-                "total_long": coinank_state.total_long,
-                "total_short": coinank_state.total_short,
-                "peak_long": coinank_state.peak_long,
-                "peak_short": coinank_state.peak_short,
-                "current_price": coinank_state.current_price,
-                "price_step_median": coinank_state.price_step_median,
-                "notes": coinank_state.notes,
-            },
-            coinglass_state.provider: {
-                "source_url": coinglass_state.source_url,
-                "saved_file": coinglass_state.saved_file,
-                "symbol": coinglass_state.symbol,
-                "exchange": coinglass_state.exchange,
-                "timeframe": coinglass_state.timeframe,
-                "bucket_count": coinglass_state.bucket_count,
-                "total_value": coinglass_state.total_value,
-                "total_long": coinglass_state.total_long,
-                "total_short": coinglass_state.total_short,
-                "peak_long": coinglass_state.peak_long,
-                "peak_short": coinglass_state.peak_short,
-                "current_price": coinglass_state.current_price,
-                "price_step_median": coinglass_state.price_step_median,
-                "notes": coinglass_state.notes,
-            },
-        },
+        "providers": providers,
         "common_leverage_tiers": common_tiers,
         "leverage_composition": leverage_composition,
         "scenarios": [scenario.to_public_dict() for scenario in scenarios],
@@ -1080,6 +1260,22 @@ def main() -> int:
 
     coinank_state = extract_coinank_state(coinank_capture)
     coinglass_state = extract_coinglass_state(coinglass_capture)
+    settings = get_settings()
+    internal_time_window = choose_internal_time_window(
+        coinank_state.timeframe,
+        coinglass_state.timeframe,
+        args.internal_time_window,
+    )
+    internal_payload, internal_source_url = fetch_internal_heatmap_payload(
+        api_base=args.internal_api_base or settings.api_url,
+        symbol=coinank_state.symbol or coinglass_state.symbol or "BTCUSDT",
+        time_window=internal_time_window,
+        price_bin_size=choose_internal_price_bin_size(coinank_state, coinglass_state),
+    )
+    internal_state = extract_internal_state(
+        internal_payload,
+        source_url=internal_source_url,
+    )
 
     common_tiers = sorted(
         set(coinank_state.leverage_totals) & set(coinglass_state.leverage_totals)
@@ -1138,12 +1334,38 @@ def main() -> int:
                 "This is the best apples-to-apples comparison available from the current payloads.",
             ],
         ),
+        build_scenario_metrics(
+            "internal_vs_coinank",
+            "Internal latest heatmap snapshot versus CoinAnk price-map.",
+            internal_state,
+            coinank_state,
+            notes=[
+                (
+                    "Internal uses the latest heatmap-timeseries snapshot. "
+                    "Shape metrics are aligned on a shared coarse grid; totals stay native."
+                ),
+            ],
+        ),
+        build_scenario_metrics(
+            "internal_vs_coinglass",
+            "Internal latest heatmap snapshot versus Coinglass price-map.",
+            internal_state,
+            coinglass_state,
+            common_tiers=common_tiers,
+            notes=[
+                (
+                    "Internal uses the latest heatmap-timeseries snapshot. "
+                    "This is the direct benchmark path for our model vs Coinglass."
+                ),
+            ],
+        ),
     ]
 
     report = build_report(
         manifest_paths=manifest_paths,
         coinank_state=coinank_state,
         coinglass_state=coinglass_state,
+        internal_state=internal_state,
         scenarios=scenarios,
         common_tiers=common_tiers,
     )

@@ -112,7 +112,38 @@ def build_report(conn, db_path: Path, limit: int) -> dict[str, object]:
         ORDER BY scenario_name
         LIMIT ?
         """,
-        [limit],
+        [max(limit * 10, 10)],
+    )
+
+    latest_internal_alignment = fetch_rows(
+        conn,
+        """
+        WITH latest_run AS (
+            SELECT run_id, created_at
+            FROM provider_gap_analysis_runs
+            ORDER BY created_at DESC
+            LIMIT 1
+        )
+        SELECT
+            scenarios.run_id,
+            latest_run.created_at,
+            scenarios.scenario_name,
+            scenarios.left_provider,
+            scenarios.right_provider,
+            scenarios.total_ratio,
+            scenarios.long_ratio,
+            scenarios.short_ratio,
+            scenarios.shape_cosine,
+            scenarios.distribution_overlap
+        FROM provider_gap_analysis_scenarios scenarios
+        JOIN latest_run
+          ON latest_run.run_id = scenarios.run_id
+        WHERE scenarios.left_provider = 'internal'
+           OR scenarios.right_provider = 'internal'
+        ORDER BY scenarios.scenario_name
+        LIMIT ?
+        """,
+        [max(limit * 10, 10)],
     )
 
     latest_leverage = fetch_rows(
@@ -174,6 +205,7 @@ def build_report(conn, db_path: Path, limit: int) -> dict[str, object]:
         "db_path": str(db_path),
         "recent_runs": recent_runs,
         "latest_scenarios": latest_scenarios,
+        "latest_internal_alignment": latest_internal_alignment,
         "latest_leverage_by_provider": latest_leverage,
         "latest_best_basis_runs": latest_best_basis,
     }
@@ -199,6 +231,16 @@ def render_text(report: dict[str, object]) -> str:
             f"{row['left_provider']} vs {row['right_provider']} | "
             f"total_ratio={row['total_ratio']} | cosine={row['shape_cosine']} | "
             f"overlap={row['distribution_overlap']}"
+        )
+
+    lines.append("")
+    lines.append("Latest internal alignment")
+    for row in report["latest_internal_alignment"]:
+        lines.append(
+            f"- {row['scenario_name']} | {row['run_id']} | "
+            f"{row['left_provider']} vs {row['right_provider']} | "
+            f"total_ratio={row['total_ratio']} long_ratio={row['long_ratio']} "
+            f"short_ratio={row['short_ratio']}"
         )
 
     lines.append("")
