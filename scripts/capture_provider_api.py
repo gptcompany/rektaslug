@@ -129,13 +129,98 @@ def generate_coinglass_data_param() -> str:
 def resolve_coinglass_interval_limit(
     timeframe: str,
 ) -> tuple[str, int]:
-    """Return ``(interval, limit)`` for a given CLI/UI timeframe string."""
+    """Return ``(interval, limit)`` for a given CLI/UI timeframe string.
+
+    Raises ``ValueError`` if the timeframe is not recognized.
+    """
     key = timeframe.strip().lower()
     key = _CG_TIMEFRAME_ALIASES.get(key, key)
     if key in COINGLASS_TIMEFRAME_MAP:
         return COINGLASS_TIMEFRAME_MAP[key]
-    # Fallback: 1 day
-    return ("1", 1500)
+    supported = sorted(COINGLASS_TIMEFRAME_MAP.keys())
+    raise ValueError(
+        f"Unsupported CoinGlass timeframe: {timeframe!r}. "
+        f"Supported: {', '.join(supported)}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Browserless CoinGlass API (no Playwright needed)
+# ---------------------------------------------------------------------------
+
+_CG_LOGIN_URL = "https://capi.coinglass.com/coin-community/api/user/login"
+_CG_LIQMAP_URL = "https://capi.coinglass.com/api/index/5/liqMap"
+
+
+def coinglass_rest_login(email: str, password: str) -> dict[str, Any]:
+    """Login to CoinGlass via REST and return token info.
+
+    Returns a dict with ``accessToken``, ``refreshToken``, and
+    ``accessTokenExpireIn`` on success.  Raises ``RuntimeError`` on failure.
+    """
+    import urllib.request
+    import urllib.parse
+
+    body = urllib.parse.urlencode({"mailAddress": email, "password": password}).encode()
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json",
+        "User-Agent": DEFAULT_USER_AGENT,
+        "Language": "en",
+        "Encryption": "true",
+        "Cache-Ts-V2": str(int(time.time() * 1000)),
+    }
+    req = urllib.request.Request(_CG_LOGIN_URL, data=body, headers=headers)
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        data = json.loads(resp.read().decode())
+
+    if data.get("code") != "0" or not data.get("data", {}).get("accessToken"):
+        raise RuntimeError(f"CoinGlass login failed: {data.get('msg', data)}")
+    return data["data"]
+
+
+def coinglass_rest_fetch_liqmap(
+    access_token: str,
+    timeframe: str,
+    symbol: str = "Binance_BTCUSDT",
+) -> dict[str, Any]:
+    """Fetch liqMap from CoinGlass API without a browser.
+
+    Returns the raw JSON response dict (with encrypted ``data`` field).
+    """
+    import urllib.request
+
+    interval, limit = resolve_coinglass_interval_limit(timeframe)
+    data_param = generate_coinglass_data_param()
+    data_encoded = quote(data_param, safe="")
+
+    url = (
+        f"{_CG_LIQMAP_URL}?merge=true&symbol={symbol}"
+        f"&interval={interval}&limit={limit}&data={data_encoded}"
+    )
+    headers = {
+        "Accept": "application/json",
+        "User-Agent": DEFAULT_USER_AGENT,
+        "Language": "en",
+        "Encryption": "true",
+        "Cache-Ts-V2": str(int(time.time() * 1000)),
+        "Obe": access_token,
+        "Referer": "https://www.coinglass.com/",
+    }
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        result = json.loads(resp.read().decode())
+        resp_headers = {k.lower(): v for k, v in resp.getheaders()}
+
+    return {
+        "url": url,
+        "status": 200,
+        "body": result,
+        "response_headers": {
+            k: resp_headers[k] for k in ("encryption", "user", "v", "time")
+            if k in resp_headers
+        },
+    }
 
 
 @dataclass
@@ -224,6 +309,17 @@ def parse_args() -> argparse.Namespace:
         "--headed",
         action="store_true",
         help="Run Chromium with UI for debugging.",
+    )
+    parser.add_argument(
+        "--coinglass-mode",
+        choices=["browser", "rest", "auto"],
+        default="browser",
+        help=(
+            "CoinGlass capture method. "
+            "'browser': Playwright route interception (default). "
+            "'rest': direct REST API replay (no browser). "
+            "'auto': try REST first, fallback to browser on failure."
+        ),
     )
     return parser.parse_args()
 
@@ -417,19 +513,25 @@ def looks_like_json_body(content_type: str, url: str, body: str) -> bool:
 def summarize_json_payload(payload: Any) -> dict[str, Any]:
     """Return a lightweight description of a parsed JSON payload."""
     if isinstance(payload, dict):
-        return {
+        summary: dict[str, Any] = {
             "kind": "object",
             "top_level_keys": sorted(str(key) for key in payload.keys())[:50],
         }
+        # Preserve boolean success/code fields for downstream verification.
+        if "success" in payload:
+            summary["success"] = payload["success"]
+        if "code" in payload:
+            summary["code"] = payload["code"]
+        return summary
 
     if isinstance(payload, list):
-        summary: dict[str, Any] = {
+        arr_summary: dict[str, Any] = {
             "kind": "array",
             "length": len(payload),
         }
         if payload and isinstance(payload[0], dict):
-            summary["first_item_keys"] = sorted(str(key) for key in payload[0].keys())[:50]
-        return summary
+            arr_summary["first_item_keys"] = sorted(str(key) for key in payload[0].keys())[:50]
+        return arr_summary
 
     return {
         "kind": type(payload).__name__,
@@ -542,28 +644,25 @@ async def prime_bitcoincounterflow_capture(page) -> None:
 async def coinglass_direct_fetch(
     target: CaptureTarget,
     page,
-    provider_dir: Path,  # noqa: ARG001
-    captured: list[dict[str, Any]],  # noqa: ARG001
-    capture_lock: asyncio.Lock,  # noqa: ARG001
+    captured: list[dict[str, Any]],
 ) -> bool:
-    """Fetch CoinGlass liqMap directly using the generated ``data`` parameter.
+    """Rewrite the CoinGlass liqMap request via Playwright route interception.
 
-    After browser login, this calls the API endpoint via ``page.evaluate(fetch)``
-    which carries the session cookies automatically.  No dropdown clicking needed.
+    After browser login, intercepts the page's own ``liqMap`` API request using
+    ``page.route()`` and rewrites ``interval``, ``limit``, and ``data`` params.
+    A ``page.reload()`` triggers the authenticated axios call which our handler
+    intercepts.
 
-    Returns True if the fetch succeeded and the response was saved.
+    Returns True only if:
+    - At least one liqMap request was intercepted and rewritten.
+    - The corresponding response contains ``success: true`` with matching
+      ``interval``/``limit``.
     """
     timeframe_key = target.ui_timeframe or "1d"
     interval, limit = resolve_coinglass_interval_limit(timeframe_key)
     data_param = generate_coinglass_data_param()
-    symbol = "Binance_BTCUSDT"
 
     data_encoded = quote(data_param, safe="")
-    api_url = (
-        f"https://capi.coinglass.com/api/index/5/liqMap"
-        f"?merge=true&symbol={symbol}&interval={interval}&limit={limit}"
-        f"&data={data_encoded}"
-    )
 
     # Intercept and rewrite the page's own liqMap requests via Playwright
     # route API.  This lets us change the interval/limit without clicking the
@@ -573,14 +672,9 @@ async def coinglass_direct_fetch(
     async def rewrite_liqmap(route):
         nonlocal rewritten
         url = route.request.url
-        # Replace interval and limit in the query string.
-        import re as _re
-
-        new_url = _re.sub(r"interval=[^&]+", f"interval={interval}", url)
-        new_url = _re.sub(r"limit=\d+", f"limit={limit}", new_url)
-        # Also inject our generated data param (the page generates its own,
-        # but this proves the Python TOTP logic works).
-        new_url = _re.sub(r"data=[^&]+", f"data={data_encoded}", new_url)
+        new_url = re.sub(r"interval=[^&]+", f"interval={interval}", url)
+        new_url = re.sub(r"limit=\d+", f"limit={limit}", new_url)
+        new_url = re.sub(r"data=[^&]+", f"data={data_encoded}", new_url)
         rewritten = True
         await route.continue_(url=new_url)
 
@@ -609,8 +703,29 @@ async def coinglass_direct_fetch(
         print("  coinglass route: no liqMap request intercepted")
         return False
 
-    # The response was already captured by the main response handler.
-    return True
+    # Verify that the main response handler actually captured a successful
+    # liqMap response with the expected interval/limit.
+    verified = False
+    for cap in captured:
+        url = cap.get("source_url", "")
+        if "liqMap" not in url:
+            continue
+        if f"interval={interval}" not in url:
+            continue
+        if f"limit={limit}" not in url:
+            continue
+        summary = cap.get("summary", {})
+        if summary.get("success") is True:
+            verified = True
+            break
+
+    if not verified:
+        print(
+            f"  coinglass route: request rewritten but no verified liqMap "
+            f"response with interval={interval}&limit={limit} and success=true"
+        )
+
+    return verified
 
 
 async def capture_target(
@@ -745,7 +860,7 @@ async def capture_target(
             if target.provider == "coinglass" and login_success:
                 await dismiss_coinglass_popups(page)
                 timeframe_applied = await coinglass_direct_fetch(
-                    target, page, provider_dir, captured, capture_lock,
+                    target, page, captured,
                 )
 
             if target.provider == "bitcoincounterflow":
@@ -799,26 +914,150 @@ def build_run_comparison(provider_summaries: list[dict[str, Any]]) -> dict[str, 
     }
 
 
+def _redact_url(url: str) -> str:
+    """Strip the ``data`` query parameter from a CoinGlass URL for safe logging."""
+    return re.sub(r"data=[^&]+", "data=REDACTED", url)
+
+
+def capture_coinglass_rest(
+    target: CaptureTarget,
+    run_dir: Path,
+) -> dict[str, Any]:
+    """Capture CoinGlass liqMap via REST (no browser).
+
+    Produces the same summary shape as ``capture_target()`` so downstream
+    consumers (manifest, comparator) work unchanged.
+
+    Sensitive auth material (tokens, ``data`` param) is redacted from the
+    persisted summary/manifest.
+    """
+    provider_dir = run_dir / target.provider
+    provider_dir.mkdir(parents=True, exist_ok=True)
+
+    if not target.email or not target.password:
+        raise RuntimeError(
+            "COINGLASS_USER_LOGIN / COINGLASS_USER_PASSWORD required "
+            "for REST capture"
+        )
+
+    token_info = coinglass_rest_login(target.email, target.password)
+    access_token = token_info["accessToken"]
+
+    timeframe_key = target.ui_timeframe or "1d"
+    result = coinglass_rest_fetch_liqmap(access_token, timeframe_key)
+
+    body = result["body"]
+    body_text = json.dumps(body, indent=2, ensure_ascii=True)
+    output_path = provider_dir / "01_liqmap.json"
+    output_path.write_text(body_text, encoding="utf-8")
+
+    interval, limit = resolve_coinglass_interval_limit(timeframe_key)
+    payload_summary = summarize_json_payload(body)
+
+    # Redact the URL for persistence (strip TOTP data param).
+    safe_url = _redact_url(result["url"])
+
+    captured = [
+        {
+            "provider": target.provider,
+            "source_url": safe_url,
+            "status": result["status"],
+            "method": "GET",
+            "content_type": "application/json",
+            "response_headers": result["response_headers"],
+            "request_headers": {},
+            "request_post_data": "",
+            "saved_file": str(output_path),
+            "summary": payload_summary,
+        }
+    ]
+
+    # Validate against the original (non-redacted) URL for interval/limit.
+    raw_url = result["url"]
+    verified = (
+        payload_summary.get("success") is True
+        and f"interval={interval}" in raw_url
+        and f"limit={limit}" in raw_url
+    )
+
+    if not verified:
+        raise RuntimeError(
+            f"CoinGlass REST capture failed verification: "
+            f"interval={interval}, limit={limit}, "
+            f"success={payload_summary.get('success')}"
+        )
+
+    summary = {
+        "provider": target.provider,
+        "page_url": target.url,
+        "login_attempted": True,
+        "login_success": True,
+        "requested_ui_timeframe": target.ui_timeframe,
+        "timeframe_applied": verified,
+        "capture_count": len(captured),
+        "captures": captured,
+        "capture_mode": "rest",
+    }
+
+    summary_path = provider_dir / "summary.json"
+    summary_path.write_text(
+        json.dumps(summary, indent=2, ensure_ascii=True), encoding="utf-8"
+    )
+    return summary
+
+
 async def run_capture(args: argparse.Namespace, emit_progress: bool = True) -> Path:
     """Execute the capture workflow and return the manifest path."""
     targets = build_targets(args)
     run_dir = args.output_dir / utc_timestamp_slug()
     run_dir.mkdir(parents=True, exist_ok=True)
 
+    cg_mode = getattr(args, "coinglass_mode", "browser")
+
     provider_summaries: list[dict[str, Any]] = []
     for target in targets:
         if emit_progress:
-            print(f"capturing {target.provider}: {target.url}")
-        summary = await capture_target(
-            target=target,
-            run_dir=run_dir,
-            max_responses=args.max_responses,
-            post_load_wait_ms=args.post_load_wait_ms,
-            headless=not args.headed,
-        )
+            mode_label = f" [{cg_mode}]" if target.provider == "coinglass" else ""
+            print(f"capturing {target.provider}{mode_label}: {target.url}")
+
+        summary: dict[str, Any] | None = None
+
+        # CoinGlass REST or auto path
+        if target.provider == "coinglass" and cg_mode in ("rest", "auto"):
+            try:
+                summary = capture_coinglass_rest(target, run_dir)
+                if emit_progress:
+                    print(
+                        f"saved {summary['capture_count']} JSON responses "
+                        f"for {target.provider} [rest]"
+                    )
+            except Exception as exc:
+                if cg_mode == "rest":
+                    raise
+                if emit_progress:
+                    print(
+                        f"  REST failed ({exc}), falling back to browser"
+                    )
+                summary = None  # fall through to browser path
+
+        # Browser path (default, or auto fallback)
+        if summary is None:
+            summary = await capture_target(
+                target=target,
+                run_dir=run_dir,
+                max_responses=args.max_responses,
+                post_load_wait_ms=args.post_load_wait_ms,
+                headless=not args.headed,
+            )
+            if "capture_mode" not in summary:
+                summary["capture_mode"] = "browser"
+            if emit_progress:
+                print(
+                    f"saved {summary['capture_count']} JSON responses "
+                    f"for {target.provider} [{summary.get('capture_mode', 'browser')}]"
+                )
+
         provider_summaries.append(summary)
-        if emit_progress:
-            print(f"saved {summary['capture_count']} JSON responses for {target.provider}")
 
     manifest = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
@@ -828,6 +1067,7 @@ async def run_capture(args: argparse.Namespace, emit_progress: bool = True) -> P
             "coin": args.coin,
             "timeframe": args.timeframe,
             "coinglass_timeframe": args.coinglass_timeframe,
+            "coinglass_mode": cg_mode,
             "exchange": args.exchange,
             "max_responses": args.max_responses,
             "post_load_wait_ms": args.post_load_wait_ms,
@@ -836,7 +1076,9 @@ async def run_capture(args: argparse.Namespace, emit_progress: bool = True) -> P
         "comparison": build_run_comparison(provider_summaries),
     }
     manifest_path = run_dir / "manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=True), encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, ensure_ascii=True), encoding="utf-8"
+    )
     if emit_progress:
         print(f"manifest: {manifest_path}")
     return manifest_path

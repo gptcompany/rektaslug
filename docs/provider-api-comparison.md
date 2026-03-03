@@ -74,6 +74,23 @@ python3 scripts/capture_provider_api.py \
   --coinglass-url "https://www.coinglass.com/..."
 ```
 
+```bash
+# CoinGlass via REST (no browser needed):
+dotenvx run -f /media/sam/1TB/.env -- uv run python scripts/capture_provider_api.py \
+  --provider both \
+  --timeframe 1w \
+  --coinglass-mode rest \
+  --coinglass-url "https://www.coinglass.com/pro/futures/LiquidationMap"
+```
+
+The `--coinglass-mode` flag controls CoinGlass capture method:
+- `browser` (default): Playwright route interception
+- `rest`: direct REST API replay, no browser
+- `auto`: try REST first, fallback to browser on failure
+
+The manifest records both the requested mode (`args.coinglass_mode`) and the
+actual mode used per provider (`capture_mode` in each provider summary).
+
 Captures are written under:
 
 `data/validation/raw_provider_api/<timestamp>/`
@@ -157,20 +174,31 @@ validation DuckDB (`data/validation/validation_results.duckdb`). Use
 - The apples-to-apples route for CoinAnk `liq-map` is now:
   - `https://www.coinglass.com/pro/futures/LiquidationMap`
 - That route does **not** encode the timeframe in the URL.
-- The script now applies the timeframe via the first visible timeframe dropdown
-  on the page and records the result in the manifest as:
-  - `requested_ui_timeframe`
-  - `timeframe_applied`
-- Current CLI-to-UI mapping for `LiquidationMap`:
-  - `1d -> 1 day`
-  - `1w -> 7 day`
-  - `1M -> 30 day`
-  - `3M -> 90 day`
-  - `6M -> 180 day`
-- On `1w`, the page first loads the default `1 day` request, then emits a
-  second authenticated request after the dropdown changes. The comparison
-  script keeps the later, higher-priority capture because it appears later in
-  the manifest with the same parse score.
+- The script now applies the timeframe via **Playwright route interception**
+  (as of commit `cae0e8f`). Instead of clicking the dropdown, it intercepts
+  the page's own authenticated `liqMap` request and rewrites the `interval`,
+  `limit`, and `data` query parameters before forwarding.
+- `timeframe_applied` is set to `true` only when a rewritten response is
+  captured with matching `interval`/`limit` and `success: true` in the body.
+- All 6 timeframes have been verified with real captures (2026-03-03):
+  - `1d -> interval=1, limit=1500`
+  - `1w -> interval=5, limit=2000`
+  - `1m -> interval=30, limit=1440`
+  - `3m -> interval=90d, limit=1440`
+  - `6m -> interval=180d, limit=1440`
+  - `1y -> interval=365d, limit=1440`
+- The `data` parameter is generated in Python using the same TOTP+AES
+  mechanism as the CoinGlass frontend (reverse-engineered from `_app` bundle).
+- On reload, the page first loads the default `interval=1` request, then
+  the route handler rewrites subsequent requests with the desired params.
+  The comparison script keeps the later, higher-priority capture.
+- **Browserless REST replay** (added 2026-03-03): The full auth mechanism has
+  been decoded. Login is a simple `POST` to
+  `capi.coinglass.com/coin-community/api/user/login` returning an
+  `accessToken` (~27h TTL). The token is sent as the `Obe` header on API
+  calls. Use `--coinglass-mode rest` to skip Playwright entirely for
+  CoinGlass. Parity verified: REST and browser produce identical payloads
+  for the same timeframe.
 - The provider-specific BTCUSDT liquidation map endpoint is:
   - `capi.coinglass.com/api/index/5/liqMap?...`
 - Once decoded, the payload exposes:
@@ -248,13 +276,12 @@ The main missing pieces are:
 1. A better CoinAnk endpoint with explicit long/short separation
 2. Stable Coinglass captures that include whatever headers are required for
    full numeric decode on secondary endpoints such as `exLiqMap`
-3. A more precise understanding of Coinglass timeframe semantics on the pro
-   routes. `LiquidationMap` is now captured through the UI dropdown, but the
-   exact backend meaning of `interval/limit` still needs tighter documentation.
-   `LiquidationHeatMapNew` still uses the latest visible column, which is the
+3. `LiquidationHeatMapNew` still uses the latest visible column, which is the
    best current approximation of "current state", but the UI semantics may
-   still involve additional persistence rules.
+   still involve additional persistence rules
 4. Optional historical aggregation across many capture runs
+5. Monitoring for CoinGlass bundle hash changes (current: `_app-94ee9e72c1d2190a.js`).
+   If the bundle updates, the TOTP secret and AES key may need re-extraction
 
 Today, Bitcoin CounterFlow, CoinAnk, and Coinglass all have provider-specific
 parsers.
@@ -325,9 +352,12 @@ They do not replace the raw JSON capture artifacts stored on disk.
 
 ## Recommended Next Steps
 
-1. Capture one real CoinAnk run and one real Coinglass run for the same symbol
-   and timeframe.
-2. Re-run Coinglass capture with the updated manifest format so response
-   headers are preserved for the decoder path.
-3. Use `scripts/provider_comparison_sql_report.py` to watch drift across runs
+1. Run periodic `both` captures across multiple timeframes to build a baseline
+   dataset for drift analysis.
+2. Use `scripts/provider_comparison_sql_report.py` to watch drift across runs
    in `provider_comparison_*`.
+3. Investigate the ~14x total volume difference between CoinAnk and CoinGlass
+   (`getLiqMap` vs `liqMapV2`). Likely caused by different leverage tier
+   inclusion and aggregation methods.
+4. Consider extracting the CoinGlass auth token from the obfuscated axios
+   interceptor for a fully browserless replay approach.

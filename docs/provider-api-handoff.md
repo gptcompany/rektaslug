@@ -62,17 +62,20 @@ Source: `LiquidationMap-*.js` chunk, `onChangeTime` handler.
 | 180 day   | 180           | `180d`    | 1440    |
 | 1 year    | 365           | `365d`    | 1440    |
 
-### 3. Authentication Mechanism
+### 3. Authentication Mechanism (FULLY DECODED)
 
-- Auth is via a **custom header** (not cookies).
-- An axios request interceptor reads a token from storage (likely cookies-next or js-cookie)
-  and attaches it as a header on every request.
-- The interceptor is heavily obfuscated in the `_app` bundle.
-- The token is set after successful login on `www.coinglass.com`.
+- Auth is via a **custom header `obe`** containing the session token.
+- Login endpoint: `POST capi.coinglass.com/coin-community/api/user/login`
+  with `mailAddress` + `password` (form-urlencoded).
+- The response returns `accessToken` (format: `s_<32hex>`), which is:
+  - Set as a cookie `obe` on `.coinglass.com` (httpOnly=false)
+  - Read by the axios request interceptor and attached as header `obe: <token>`
+- Token TTL: ~27 hours (`accessTokenExpireIn` in response).
+- Also available: `refreshToken` (format: `l_<32hex>`) for session renewal.
 - Cross-origin requests from `www.coinglass.com` to `capi.coinglass.com` work because
   the server returns `access-control-allow-headers: *`.
-- **Direct programmatic API calls** (curl, urllib) cannot easily replicate this because
-  the token extraction from the obfuscated interceptor is non-trivial.
+- **Direct programmatic API calls now work** via `coinglass_rest_login()` +
+  `coinglass_rest_fetch_liqmap()` - no browser needed.
 
 ### 4. Response Decryption
 
@@ -85,27 +88,27 @@ The response `data` field (when `encryption` header is present) is:
 The existing `scripts/coinglass_decode_payload.js` handles this by loading
 CryptoJS and pako from the saved `_app` bundle.
 
-### 5. Can We Bypass the Dropdown?
+### 5. Can We Bypass the Browser?
 
-**Partially YES.** The implemented solution uses Playwright route interception:
+**YES, FULLY.** Two approaches are now available:
 
-1. Login via Playwright (mandatory for auth token)
+**Approach A: Playwright route interception** (original, still works)
+1. Login via Playwright browser
 2. Navigate to LiquidationMap page
 3. Intercept the page's own `liqMap` request via `page.route()`
 4. Rewrite the `interval`, `limit`, and `data` parameters
-5. The page's authenticated request goes through with our desired params
-6. Page reload triggers a fresh request with the right parameters
+5. Page reload triggers a fresh authenticated request with desired params
 
-This is **more robust** than the dropdown because:
-- No DOM element searching/clicking
-- No race conditions with dropdown animation
-- Exact control over parameters
-- Works even if CoinGlass changes the dropdown UI
+**Approach B: Pure REST replay** (new, no browser needed)
+1. `POST` to login endpoint with email/password → get `accessToken`
+2. `GET` liqMap with `Obe: <token>` header + TOTP+AES `data` param
+3. Response comes back with encryption headers for decoding
 
-**Full browser bypass is NOT feasible** because:
-- The auth token is managed by an obfuscated axios interceptor
-- Cross-origin CORS restrictions prevent direct fetch/XHR with custom headers
-- The login API is server-rendered (next-auth) with no simple REST endpoint
+Approach B is **preferred** for automation/CI because:
+- No Playwright dependency for the CoinGlass path
+- Faster (~2 seconds vs ~30 seconds with browser)
+- No headless detection risks
+- Simpler error handling
 
 ## Implementation Changes
 
@@ -120,10 +123,12 @@ This is **more robust** than the dropdown because:
 2. **`pyproject.toml`** (via `uv add`)
    - Added `pyotp` and `pycryptodome` dependencies
 
-### Unchanged Files
+3. **`scripts/coinglass_decode_payload.js`**
+   - Updated decoding logic to handle new response format
 
-- `scripts/coinglass_decode_payload.js` - response decoder (works as-is)
-- `scripts/compare_provider_liquidations.py` - comparator (works as-is)
+4. **`scripts/compare_provider_liquidations.py`**
+   - Major expansion: added cross-provider comparison logic, SQL reporting,
+     and CoinGlass decoded payload integration
 
 ## Verified Captures
 
@@ -167,17 +172,35 @@ This is **more robust** than the dropdown because:
 | Chunk 33638 | `b2f137eab4511f73` | Exchange-specific liquidation map chart |
 | Chunk 74267 | `5c8fab292b36814d` | Aggregate liquidation map chart |
 
+### 6. Browserless REST API Replay (FULLY WORKING)
+
+The full browser flow can now be replaced by two plain HTTP calls:
+
+1. **Login**: `POST capi.coinglass.com/coin-community/api/user/login`
+   - Content-Type: `application/x-www-form-urlencoded`
+   - Body: `mailAddress=<email>&password=<password>`
+   - Required headers: `Language: en`, `Encryption: true`, `Cache-Ts-V2: <now_ms>`
+   - Returns JSON with `accessToken` (= `obe` header), ~27h TTL
+
+2. **Fetch liqMap**: `GET capi.coinglass.com/api/index/5/liqMap?...`
+   - Headers: `Obe: <accessToken>`, `Language: en`, `Encryption: true`,
+     `Cache-Ts-V2: <now_ms>`, `Referer: https://www.coinglass.com/`
+   - Query: `merge=true&symbol=Binance_BTCUSDT&interval=<X>&limit=<Y>&data=<totp_aes>`
+   - Returns encrypted response with `encryption`/`user`/`v`/`time` headers for decoding
+
+Python functions: `coinglass_rest_login()` and `coinglass_rest_fetch_liqmap()` in
+`scripts/capture_provider_api.py`. All 6 timeframes verified browserless (2026-03-03).
+
 ## Next Steps
 
 1. **Monitor bundle hash changes** - If CoinGlass updates the frontend, the TOTP
    secret and AES key may change. The bundle URL hash will change when this happens.
-2. **Consider headless cookie extraction** - If a fully browserless approach is
-   desired, extract the auth token from the obfuscated interceptor by running the
-   webpack module in Node.js (similar to the decoder approach).
-3. **Test all timeframes** - Currently verified 1d and 1w. Test 30d, 90d, 180d, 1y.
+2. **Investigate ~14x volume difference** - CoinAnk `getLiqMap` vs CoinGlass
+   `liqMapV2` total volumes differ by ~14x. Likely leverage tier inclusion and
+   aggregation methodology differences.
 
 ## Commit History
 
 - `28ba2ea` Add end-to-end provider comparison workflow
 - `60bbd39` Decode Coinglass payloads and add SQL reporting
-- (this commit) Reverse engineer CoinGlass data param and add route interception
+- `cae0e8f` Reverse engineer CoinGlass data param and add route interception
