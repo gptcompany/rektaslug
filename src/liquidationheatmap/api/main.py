@@ -1,5 +1,6 @@
 """FastAPI application for liquidation heatmap API."""
 
+import asyncio
 import json
 import logging
 import time
@@ -213,7 +214,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-from ..ingestion.db_service import DuckDBService
+from ..ingestion.db_service import DuckDBService, IngestionLockError
+from ..ingestion.gap_fill import run_gap_fill
 from ..models.binance_standard import BinanceStandardModel
 from ..models.ensemble import EnsembleModel
 from ..models.funding_adjusted import FundingAdjustedModel
@@ -311,6 +313,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Exception handler: return 503 when ingestion lock is active
+@app.exception_handler(IngestionLockError)
+async def ingestion_lock_handler(request: Request, exc: IngestionLockError):
+    return JSONResponse(
+        status_code=503,
+        content={
+            "error": "Service Unavailable",
+            "message": "Database is locked for gap-fill ingestion. Retry shortly.",
+        },
+        headers={"Retry-After": "10"},
+    )
+
+
+# Serialization lock for in-process gap-fill (one execution at a time)
+_gap_fill_lock = asyncio.Lock()
 
 # Register API routers
 from src.liquidationheatmap.api.routers import signals_router
@@ -656,6 +674,82 @@ async def refresh_connections():
         result["status"] = "error"
         result["error"] = str(e)
         return result
+
+
+@app.post("/api/v1/gap-fill")
+async def gap_fill(
+    dry_run: bool = Query(False, description="Count available data without writing"),
+):
+    """Run in-process gap-fill from ccxt-data-pipeline Parquet catalog.
+
+    Closes all read-only DuckDB singletons, acquires the ingestion lock,
+    opens a read-write connection in-process, fills klines/OI/funding for
+    configured symbols, then releases the lock and warms up read connections.
+
+    Serialized: only one gap-fill runs at a time.
+    During execution: DB-backed routes return 503.
+    """
+    if _gap_fill_lock.locked():
+        return JSONResponse(
+            status_code=409,
+            content={
+                "status": "conflict",
+                "message": "A gap-fill is already in progress.",
+            },
+        )
+
+    async with _gap_fill_lock:
+        import gc
+
+        t0 = time.time()
+        catalog = str(_settings.ccxt_catalog)
+        db_path = str(_settings.db_path)
+        symbols = list(_settings.symbols)
+
+        logger.info("Gap-fill started: symbols=%s dry_run=%s", symbols, dry_run)
+
+        try:
+            # 1. Set ingestion lock to block new read connections
+            DuckDBService.set_ingestion_lock()
+
+            # 2. Close all read-only singletons so DuckDB file lock is released
+            closed = DuckDBService.close_all_instances()
+            gc.collect()
+            logger.info("Gap-fill: closed %d DB singletons", closed)
+
+            # 3. Run the fill in-process (opens its own read-write connection)
+            result = await asyncio.to_thread(
+                run_gap_fill, db_path, catalog, symbols, dry_run
+            )
+
+            elapsed = round(time.time() - t0, 2)
+            result["duration_seconds"] = elapsed
+            result["status"] = "success"
+            logger.info("Gap-fill complete: %d rows in %ss", result["total_inserted"], elapsed)
+
+            return result
+
+        except FileNotFoundError as e:
+            logger.error("Gap-fill path error: %s", e)
+            return JSONResponse(
+                status_code=400,
+                content={"status": "error", "message": str(e)},
+            )
+        except Exception as e:
+            logger.error("Gap-fill failed: %s", e, exc_info=True)
+            return JSONResponse(
+                status_code=500,
+                content={"status": "error", "message": str(e)},
+            )
+        finally:
+            # 4. Always release lock and warm up read connections
+            DuckDBService.release_ingestion_lock()
+            try:
+                db = DuckDBService(read_only=True)
+                db.conn.execute("SELECT 1").fetchone()
+                logger.info("Gap-fill: read connections restored")
+            except Exception as e:
+                logger.warning("Gap-fill: failed to restore read connections: %s", e)
 
 
 @app.get("/data/date-range")

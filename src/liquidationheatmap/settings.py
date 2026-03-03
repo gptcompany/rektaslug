@@ -33,6 +33,7 @@ class AppSettings:
     project_root: Path
     data_dir: Path
     db_path: Path
+    ccxt_catalog: Path
     symbols: tuple[str, ...]
     cors_allowed_origins: tuple[str, ...]
     rate_limit_enabled: bool
@@ -61,6 +62,12 @@ class AppSettings:
                 os.getenv(
                     "HEATMAP_DB_PATH",
                     "/media/sam/2TB-NVMe/liquidationheatmap_db/liquidations.duckdb",
+                )
+            ),
+            ccxt_catalog=Path(
+                os.getenv(
+                    "HEATMAP_CCXT_CATALOG",
+                    "/media/sam/1TB/ccxt-data-pipeline/data/catalog",
                 )
             ),
             symbols=_read_csv("HEATMAP_SYMBOLS", ("BTCUSDT", "ETHUSDT")),

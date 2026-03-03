@@ -1,5 +1,6 @@
 #!/bin/bash
-# Near-real-time bridge from ccxt-data-pipeline Parquet catalog into DuckDB.
+# Near-real-time bridge: triggers in-process gap-fill via the API endpoint.
+# The API handles DuckDB locking internally (no cross-process lock conflicts).
 
 set -euo pipefail
 
@@ -9,52 +10,24 @@ lh_load_runtime_env host
 
 log() { echo "[$(date -Iseconds)] $1"; }
 
-api_post() {
-    local endpoint="$1"
-    curl -s --max-time 10 -X POST "${API_URL}${endpoint}" >/dev/null 2>&1 || true
-}
+log "Triggering gap-fill via API at ${API_URL}"
 
-test_db_write_access() {
-    uv run --project "$PROJECT_DIR" python -c "
-import duckdb, sys
-try:
-    conn = duckdb.connect('${DB_PATH}', read_only=False)
-    conn.close()
-    sys.exit(0)
-except Exception:
-    sys.exit(1)
-" 2>/dev/null
-}
+response=$(curl -s -w "\n%{http_code}" --max-time 120 \
+    -X POST "${API_URL}/api/v1/gap-fill")
 
-if [ ! -d "$CCXT_CATALOG" ]; then
-    log "CCXT catalog not found at $CCXT_CATALOG, skipping"
-    exit 0
+http_code=$(echo "$response" | tail -1)
+body=$(echo "$response" | sed '$d')
+
+if [ "$http_code" = "200" ]; then
+    total=$(echo "$body" | python3 -c "import sys,json; print(json.load(sys.stdin).get('total_inserted',0))" 2>/dev/null || echo "?")
+    duration=$(echo "$body" | python3 -c "import sys,json; print(json.load(sys.stdin).get('duration_seconds','?'))" 2>/dev/null || echo "?")
+    log "Gap-fill complete: ${total} rows inserted in ${duration}s"
+elif [ "$http_code" = "409" ]; then
+    log "Gap-fill already in progress, skipping"
+elif [ "$http_code" = "400" ]; then
+    log "Gap-fill config error: $body"
+    exit 1
+else
+    log "Gap-fill failed (HTTP ${http_code}): $body"
+    exit 1
 fi
-
-log "Starting ccxt gap fill"
-log "Catalog: $CCXT_CATALOG"
-log "DB: $DB_PATH"
-log "Symbols: $SYMBOLS"
-
-api_post "/api/v1/prepare-for-ingestion"
-uv run --project "$PROJECT_DIR" python "$PROJECT_DIR/scripts/cleanup_duckdb_locks.py" "$DB_PATH" || true
-
-if ! test_db_write_access; then
-    log "DuckDB busy, skipping this run"
-    api_post "/api/v1/refresh-connections"
-    exit 0
-fi
-
-uv run --project "$PROJECT_DIR" python "$PROJECT_DIR/scripts/fill_gap_from_ccxt.py" \
-    --symbols $SYMBOLS \
-    --ccxt-catalog "$CCXT_CATALOG" \
-    --db "$DB_PATH" || status=$?
-
-api_post "/api/v1/refresh-connections"
-status="${status:-0}"
-if [ "$status" -ne 0 ]; then
-    log "ccxt gap fill failed"
-    exit "$status"
-fi
-
-log "ccxt gap fill complete"
