@@ -966,8 +966,8 @@ class DuckDBService:
             CROSS JOIN LeverageDistribution ld
         ),
 
-        # STEP 5: Calculate liquidation prices
-        # Use base MMR (0.4%) as maps are aggregated and individual position sizes are unknown
+        -- STEP 5: Calculate liquidation prices
+        -- Use base MMR (0.4%) as maps are aggregated and individual position sizes are unknown
         AllLiquidations AS (
             SELECT
                 price_bucket,
