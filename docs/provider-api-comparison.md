@@ -18,6 +18,7 @@ Two scripts now cover the workflow:
 
 - `scripts/capture_provider_api.py`
 - `scripts/compare_provider_liquidations.py`
+- `scripts/coinglass_decode_payload.js`
 
 The first script captures raw JSON responses during page load with Playwright.
 The second script reads one or more capture manifests, normalizes the most
@@ -26,6 +27,10 @@ relevant liquidation dataset per provider, and emits a comparison report.
 A third script now orchestrates the full workflow:
 
 - `scripts/run_provider_api_comparison.py`
+
+For SQL-backed review of historical runs, there is also:
+
+- `scripts/provider_comparison_sql_report.py`
 
 This wrapper performs capture, normalization, comparison, report writing, and
 optional DuckDB persistence in one command.
@@ -79,6 +84,12 @@ Each run contains:
 - `summary.json` per provider
 - `manifest.json` for the whole run
 
+Each captured response now also preserves the small header subset needed for
+future provider-specific decoding:
+
+- Coinglass response headers such as `user`, `time`, `v`, `encryption`
+- the request header `cache-ts-v2` when present
+
 ### 2. Compare captured payloads
 
 ```bash
@@ -91,6 +102,15 @@ If no manifest is provided, the script uses the latest capture run.
 Reports are written under:
 
 `data/validation/provider_comparisons/`
+
+### 2b. Query historical comparisons from DuckDB
+
+```bash
+python3 scripts/provider_comparison_sql_report.py
+```
+
+Use `--json` for machine-readable output or `--db-path` to point at a
+non-default DuckDB.
 
 ### 3. Run the full workflow in one command
 
@@ -110,17 +130,26 @@ validation DuckDB (`data/validation/validation_results.duckdb`). Use
 ### CoinAnk
 
 - Capture is page-driven and reuses the existing CoinAnk login flow.
-- Raw payload parsing is currently heuristic.
-- Once a stable CoinAnk liquidation endpoint is captured, add a dedicated
-  parser instead of relying on generic field matching.
+- `getAggLiqMap` is parsed explicitly.
+- The remaining limitation is semantic, not structural: the endpoint exposes
+  one magnitude array per exchange, so long/short are still inferred by
+  splitting around `lastPrice`.
+- A better CoinAnk source is still worth finding if it exposes separate
+  long/short ladders.
 
 ### Coinglass
 
 - Capture requires an explicit `--coinglass-url`.
 - Login support is best-effort.
-- Raw payload parsing is currently heuristic.
-- As with CoinAnk, the next step is a dedicated parser once the endpoint shape
-  is known.
+- The current public endpoints often return an encoded string in `data`.
+- `scripts/compare_provider_liquidations.py` now has a header-aware decode path
+  for Coinglass, but it only works when the capture includes the required
+  response headers and a local `_app-*.js` bundle is available.
+- `scripts/coinglass_decode_payload.js` mirrors the site decoder by loading the
+  bundled frontend `CryptoJS` and `pako` modules directly from the saved
+  Coinglass bundle.
+- If the capture is missing `user`/`v` (or the bundle), the parser falls back
+  to envelope metadata only.
 
 ### Bitcoin CounterFlow
 
@@ -148,13 +177,15 @@ The workflow is usable, but it is not complete yet.
 
 The main missing pieces are:
 
-1. Dedicated parsers for CoinAnk raw payloads
-2. Dedicated parsers for Coinglass raw payloads
+1. A better CoinAnk endpoint with explicit long/short separation
+2. Stable Coinglass captures that include whatever headers are required for
+   full numeric decode
 3. Schema-level comparison once at least two providers have stable captured
    liquidation endpoints
 4. Optional historical aggregation across many capture runs
 
-Today, Bitcoin CounterFlow and CoinAnk have provider-specific parsers.
+Today, Bitcoin CounterFlow, CoinAnk, and Coinglass all have provider-specific
+parsers.
 
 CoinAnk now also has a provider-specific parser for `getAggLiqMap`, but its
 long/short split is still inferred by dividing bins around `lastPrice` because
@@ -162,7 +193,8 @@ the endpoint exposes one magnitude array per exchange rather than separate long
 and short arrays.
 
 Coinglass now has a provider-specific parser for the current encoded response
-envelope, but numeric decoding of its encrypted payload is still missing.
+envelope plus a header-aware decode path, but numeric decoding still depends on
+capturing the provider headers that drive the site's decrypt flow.
 
 ## DuckDB: Needed or Not?
 
@@ -216,7 +248,7 @@ They do not replace the raw JSON capture artifacts stored on disk.
 
 1. Capture one real CoinAnk run and one real Coinglass run for the same symbol
    and timeframe.
-2. Inspect the saved payloads and add provider-specific parsers to
-   `scripts/compare_provider_liquidations.py`.
-3. Only after those parsers are stable, consider a DuckDB-backed historical
-   comparison layer.
+2. Re-run Coinglass capture with the updated manifest format so response
+   headers are preserved for the decoder path.
+3. Use `scripts/provider_comparison_sql_report.py` to watch drift across runs
+   in `provider_comparison_*`.

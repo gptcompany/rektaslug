@@ -60,6 +60,18 @@ PROVIDER_DOMAINS = {
     ),
 }
 
+RELEVANT_RESPONSE_HEADERS = {
+    "content-type",
+    "encryption",
+    "language",
+    "time",
+    "user",
+    "v",
+}
+RELEVANT_REQUEST_HEADERS = {
+    "cache-ts-v2",
+}
+
 
 @dataclass
 class CaptureTarget:
@@ -217,6 +229,16 @@ def summarize_json_payload(payload: Any) -> dict[str, Any]:
         "kind": type(payload).__name__,
         "repr": str(payload)[:200],
     }
+
+
+def select_relevant_headers(headers: dict[str, str], allowed_keys: set[str]) -> dict[str, str]:
+    """Keep only the small header subset needed for later decoding/debugging."""
+    selected: dict[str, str] = {}
+    for key, value in headers.items():
+        lowered_key = key.lower()
+        if lowered_key in allowed_keys:
+            selected[lowered_key] = value
+    return selected
 
 
 async def maybe_log_in(target: CaptureTarget, page) -> bool:
@@ -399,6 +421,14 @@ async def capture_target(
 
             seen_urls.add(key)
             counter += 1
+            response_headers = select_relevant_headers(response.headers, RELEVANT_RESPONSE_HEADERS)
+            raw_request_headers = getattr(response.request, "headers", {}) or {}
+            if not isinstance(raw_request_headers, dict):
+                raw_request_headers = {}
+            request_headers = select_relevant_headers(
+                raw_request_headers,
+                RELEVANT_REQUEST_HEADERS,
+            )
 
             parsed_payload: Any = None
             file_ext = "txt"
@@ -425,6 +455,8 @@ async def capture_target(
                     "status": response.status,
                     "method": response.request.method,
                     "content_type": content_type,
+                    "response_headers": response_headers,
+                    "request_headers": request_headers,
                     "request_post_data": request_post_data[:5000],
                     "saved_file": str(output_path),
                     "summary": summary,

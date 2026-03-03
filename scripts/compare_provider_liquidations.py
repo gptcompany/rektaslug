@@ -22,7 +22,9 @@ import argparse
 import base64
 import json
 import math
+import os
 import re
+import subprocess
 import sys
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -39,6 +41,7 @@ from src.validation.constants import VALIDATION_DB_PATH
 RAW_CAPTURE_ROOT = Path("data/validation/raw_provider_api")
 DEFAULT_OUTPUT_DIR = Path("data/validation/provider_comparisons")
 DEFAULT_COMPARISON_DB_PATH = Path(VALIDATION_DB_PATH)
+COINGLASS_DECODER_SCRIPT = REPO_ROOT / "scripts" / "coinglass_decode_payload.js"
 
 LONG_VALUE_KEYS = (
     "long_value",
@@ -114,6 +117,8 @@ class CaptureFile:
     content_type: str
     payload: Any
     manifest_path: Path
+    response_headers: dict[str, str] = field(default_factory=dict)
+    request_headers: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -233,10 +238,25 @@ def load_capture_files(manifest_paths: list[Path]) -> list[CaptureFile]:
                         content_type=capture.get("content_type", ""),
                         payload=file_payload,
                         manifest_path=manifest_path,
+                        response_headers=normalize_headers(capture.get("response_headers")),
+                        request_headers=normalize_headers(capture.get("request_headers")),
                     )
                 )
 
     return captures
+
+
+def normalize_headers(raw_headers: Any) -> dict[str, str]:
+    """Normalize a serialized header mapping into lowercase string keys."""
+    if not isinstance(raw_headers, dict):
+        return {}
+
+    normalized: dict[str, str] = {}
+    for key, value in raw_headers.items():
+        if value is None:
+            continue
+        normalized[str(key).lower()] = str(value)
+    return normalized
 
 
 def safe_float(value: Any) -> float | None:
@@ -297,6 +317,256 @@ def parse_query_params(url: str) -> dict[str, str]:
     parsed = urlparse(url)
     params = parse_qs(parsed.query)
     return {key: values[0] for key, values in params.items() if values}
+
+
+def resolve_coinglass_bundle_path() -> Path | None:
+    """Find a local Coinglass frontend bundle that contains CryptoJS and pako."""
+    env_path = os.environ.get("COINGLASS_APP_BUNDLE")
+    if env_path:
+        candidate = Path(env_path)
+        if candidate.exists():
+            return candidate
+
+    tmp_candidates = sorted(
+        Path("/tmp").glob("_app-*.js"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+    for candidate in tmp_candidates:
+        try:
+            if "capi.coinglass.com" in candidate.read_text(
+                encoding="utf-8",
+                errors="ignore",
+            ):
+                return candidate
+        except Exception:
+            continue
+
+    return None
+
+
+def decode_coinglass_ciphertext(
+    ciphertext: str,
+    key: str,
+    bundle_path: Path,
+) -> tuple[str | None, str | None]:
+    """Decode one Coinglass ciphertext string via the bundled frontend crypto path."""
+    if not COINGLASS_DECODER_SCRIPT.exists():
+        return None, f"Decoder helper missing: {COINGLASS_DECODER_SCRIPT}"
+
+    ciphertext_b64 = base64.b64encode(ciphertext.encode("utf-8")).decode("ascii")
+    try:
+        result = subprocess.run(
+            [
+                "node",
+                str(COINGLASS_DECODER_SCRIPT),
+                "--bundle",
+                str(bundle_path),
+                "--ciphertext-b64",
+                ciphertext_b64,
+                "--key",
+                key,
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        return None, "node is not installed"
+    except Exception as exc:
+        return None, str(exc)
+
+    if result.returncode != 0:
+        stderr = result.stderr.strip()
+        return None, stderr or "decoder failed"
+    return result.stdout, None
+
+
+def derive_coinglass_seed_key(capture: CaptureFile) -> tuple[str | None, str]:
+    """Derive the first-stage Coinglass key from captured headers when available."""
+    version = capture.response_headers.get("v")
+    if not version:
+        return None, "Missing Coinglass response header `v`; only envelope metadata is available."
+
+    if version == "0":
+        seed_source = capture.request_headers.get("cache-ts-v2")
+        if not seed_source:
+            return None, "Coinglass `v=0` requires request header `cache-ts-v2`, but it was not captured."
+    elif version == "2":
+        seed_source = capture.response_headers.get("time")
+        if not seed_source:
+            return None, "Coinglass `v=2` requires response header `time`, but it was not captured."
+    else:
+        seed_source = urlparse(capture.source_url).path
+        if not seed_source:
+            return None, "Coinglass path-based seed derivation failed."
+
+    derived = base64.b64encode(seed_source.encode("utf-8")).decode("ascii")[:16]
+    return derived, f"Derived seed key from Coinglass header/path flow (v={version})."
+
+
+def try_parse_coinglass_decoded_payload(
+    capture: CaptureFile,
+    payload: Any,
+    decode_note: str,
+) -> NormalizedDataset | None:
+    """Reuse generic parsers once an encrypted Coinglass payload is decrypted into JSON."""
+    specialized = parse_coinglass_decoded_payload(capture, payload, decode_note)
+    if specialized is not None:
+        return specialized
+
+    decoded_capture = CaptureFile(
+        provider=capture.provider,
+        source_url=capture.source_url,
+        saved_file=capture.saved_file,
+        content_type="application/json",
+        payload=payload,
+        manifest_path=capture.manifest_path,
+        response_headers=capture.response_headers,
+        request_headers=capture.request_headers,
+    )
+
+    for parser in (parse_record_series, parse_parallel_price_arrays):
+        parsed = parser(decoded_capture)
+        if parsed is None:
+            continue
+        parsed.notes.insert(0, decode_note)
+        parsed.parse_score = max(parsed.parse_score, 92)
+        return parsed
+
+    return None
+
+
+def parse_coinglass_decoded_payload(
+    capture: CaptureFile,
+    payload: Any,
+    decode_note: str,
+) -> NormalizedDataset | None:
+    """Parse known decoded Coinglass payload shapes into numeric summaries."""
+    lowered_url = capture.source_url.lower()
+    params = parse_query_params(capture.source_url)
+
+    if "/api/futures/liquidation/chart" in lowered_url and isinstance(payload, list):
+        long_values: list[float] = []
+        short_values: list[float] = []
+        timestamps: list[float] = []
+
+        for row in payload:
+            if not isinstance(row, dict):
+                continue
+            short_value = safe_float(row.get("buyVolUsd")) or 0.0
+            long_value = safe_float(row.get("sellVolUsd")) or 0.0
+            long_values.append(long_value)
+            short_values.append(short_value)
+            timestamp = safe_float(row.get("createTime"))
+            if timestamp is not None:
+                timestamps.append(timestamp)
+
+        if long_values or short_values:
+            return NormalizedDataset(
+                provider=capture.provider,
+                source_url=capture.source_url,
+                saved_file=str(capture.saved_file),
+                dataset_kind="liquidations_timeseries",
+                structure="time_candles",
+                unit="usd_notional",
+                symbol=params.get("symbol") or None,
+                exchange=params.get("exName") or "All",
+                timeframe=params.get("range") or params.get("timeType"),
+                bucket_count=len(long_values),
+                total_long=sum(long_values),
+                total_short=sum(short_values),
+                peak_long=max(long_values, default=0.0),
+                peak_short=max(short_values, default=0.0),
+                current_price=None,
+                price_step_median=None,
+                time_step_median_ms=median_step(timestamps),
+                notes=[
+                    decode_note,
+                    "Coinglass futures/liquidation/chart uses sellVolUsd for long liquidations and buyVolUsd for short liquidations.",
+                ],
+                parse_score=97,
+            )
+
+    if "/api/coin/liquidation" in lowered_url and isinstance(payload, dict):
+        long_values: list[float] = []
+        short_values: list[float] = []
+        for row in payload.values():
+            if not isinstance(row, dict):
+                continue
+            long_values.append(safe_float(row.get("longVolUsd")) or 0.0)
+            short_values.append(safe_float(row.get("shortVolUsd")) or 0.0)
+
+        if long_values or short_values:
+            return NormalizedDataset(
+                provider=capture.provider,
+                source_url=capture.source_url,
+                saved_file=str(capture.saved_file),
+                dataset_kind="liquidation_summary",
+                structure="time_buckets_summary",
+                unit="usd_notional",
+                symbol=None,
+                exchange="All",
+                timeframe="multi_window",
+                bucket_count=len(long_values),
+                total_long=sum(long_values),
+                total_short=sum(short_values),
+                peak_long=max(long_values, default=0.0),
+                peak_short=max(short_values, default=0.0),
+                current_price=None,
+                price_step_median=None,
+                time_step_median_ms=None,
+                notes=[
+                    decode_note,
+                    "Coinglass coin/liquidation returns aggregate windows such as h1/h4/h12/h24.",
+                ],
+                parse_score=88,
+            )
+
+    if "/api/coin/liq/heatmap" in lowered_url and isinstance(payload, list):
+        long_values: list[float] = []
+        short_values: list[float] = []
+        top_symbol = None
+
+        for idx, row in enumerate(payload):
+            if not isinstance(row, dict):
+                continue
+            if idx == 0:
+                top_symbol = row.get("symbol")
+            long_values.append(safe_float(row.get("longVolUsd")) or 0.0)
+            short_values.append(safe_float(row.get("shortVolUsd")) or 0.0)
+
+        if long_values or short_values:
+            notes = [
+                decode_note,
+                "Coinglass coin/liq/heatmap on LiquidationData is a cross-asset leaderboard, not a single-symbol price-bin heatmap.",
+            ]
+            if top_symbol:
+                notes.append(f"Top symbol in this snapshot: {top_symbol}")
+
+            return NormalizedDataset(
+                provider=capture.provider,
+                source_url=capture.source_url,
+                saved_file=str(capture.saved_file),
+                dataset_kind="liquidation_leaderboard",
+                structure="asset_rows",
+                unit="usd_notional",
+                symbol=params.get("symbol") or None,
+                exchange="All",
+                timeframe=params.get("time"),
+                bucket_count=len(long_values),
+                total_long=sum(long_values),
+                total_short=sum(short_values),
+                peak_long=max(long_values, default=0.0),
+                peak_short=max(short_values, default=0.0),
+                current_price=None,
+                price_step_median=None,
+                time_step_median_ms=None,
+                notes=notes,
+                parse_score=84,
+            )
+
+    return None
 
 
 def parse_coinank_agg_liq_map(capture: CaptureFile) -> NormalizedDataset | None:
@@ -446,7 +716,7 @@ def parse_bitcoincounterflow_liquidations(capture: CaptureFile) -> NormalizedDat
 
 
 def parse_coinglass_encrypted_liquidations(capture: CaptureFile) -> NormalizedDataset | None:
-    """Recognize Coinglass liquidation endpoints that currently return encoded payloads."""
+    """Parse Coinglass liquidation endpoints, decoding them when headers make it possible."""
     lowered_url = capture.source_url.lower()
     if "coinglass.com" not in lowered_url:
         return None
@@ -457,6 +727,62 @@ def parse_coinglass_encrypted_liquidations(capture: CaptureFile) -> NormalizedDa
     encoded = root.get("data")
     if not isinstance(encoded, str) or not encoded:
         return None
+
+    bundle_path = resolve_coinglass_bundle_path()
+    decode_notes: list[str] = []
+    if capture.response_headers.get("user") and bundle_path is not None:
+        seed_key, seed_note = derive_coinglass_seed_key(capture)
+        decode_notes.append(seed_note)
+        if seed_key is not None:
+            payload_key, key_error = decode_coinglass_ciphertext(
+                ciphertext=capture.response_headers["user"],
+                key=seed_key,
+                bundle_path=bundle_path,
+            )
+            if payload_key is None:
+                decode_notes.append(f"User-key decode failed: {key_error}")
+            else:
+                decoded_text, decoded_error = decode_coinglass_ciphertext(
+                    ciphertext=encoded,
+                    key=payload_key.strip(),
+                    bundle_path=bundle_path,
+                )
+                if decoded_text is None:
+                    decode_notes.append(f"Payload decode failed: {decoded_error}")
+                else:
+                    try:
+                        decoded_payload = json.loads(decoded_text)
+                    except Exception as exc:
+                        decode_notes.append(f"Decoded text was not JSON: {exc}")
+                    else:
+                        parsed = try_parse_coinglass_decoded_payload(
+                            capture=capture,
+                            payload=decoded_payload,
+                            decode_note=(
+                                "Decoded from Coinglass encrypted payload using captured "
+                                "response headers plus bundled frontend CryptoJS/pako."
+                            ),
+                        )
+                        if parsed is not None:
+                            return parsed
+                        decode_notes.append(
+                            "Decoded Coinglass JSON was captured, but it did not match a known "
+                            "numeric liquidation schema yet."
+                        )
+    elif capture.response_headers.get("user") and bundle_path is None:
+        decode_notes.append(
+            "Coinglass response headers include `user`, but no local `_app-*.js` bundle was "
+            "found to load the site decoder. Set COINGLASS_APP_BUNDLE or keep the bundle in /tmp."
+        )
+    elif bundle_path is not None:
+        decode_notes.append(
+            "A local Coinglass bundle is available, but this capture has no `user` response "
+            "header, so the two-stage decrypt key cannot be derived."
+        )
+    else:
+        decode_notes.append(
+            "No Coinglass response headers or local bundle are available for numeric decode."
+        )
 
     decoded_size = None
     try:
@@ -475,11 +801,17 @@ def parse_coinglass_encrypted_liquidations(capture: CaptureFile) -> NormalizedDa
 
     params = parse_query_params(capture.source_url)
     notes = [
-        "Coinglass currently returns an encoded string in data; numeric decoding is not implemented yet.",
+        "Coinglass returned an encoded string in `data`; numeric decode was not completed for this capture.",
         f"Encoded chars: {len(encoded)}",
     ]
     if decoded_size is not None:
         notes.append(f"Base64-decoded bytes: {decoded_size}")
+    if capture.response_headers:
+        notes.append(
+            "Captured Coinglass response header keys: "
+            + ", ".join(sorted(capture.response_headers))
+        )
+    notes.extend(decode_notes)
 
     return NormalizedDataset(
         provider=capture.provider,
@@ -796,7 +1128,8 @@ def build_report(
         "pairwise_comparisons": build_pairwise_comparisons(datasets),
         "notes": [
             "Ratios are left/right, in the provider order shown in each comparison entry.",
-            "CoinAnk and Coinglass parsing currently relies on generic heuristics until their raw payload shapes are captured and specialized.",
+            "CoinAnk getAggLiqMap is parsed explicitly, but long/short are still inferred by splitting around lastPrice.",
+            "Coinglass will decode encrypted payloads only when the capture includes the required response headers and a local `_app-*.js` bundle is available.",
             "Bitcoin CounterFlow /api/liquidations is parsed explicitly and treated as USD-notional time-series liquidations.",
         ],
     }
