@@ -81,3 +81,37 @@ class TestBinanceStandardModel:
         """Test that BinanceStandardModel has 0.95 confidence (highest)."""
         model = BinanceStandardModel()
         assert model.confidence_score() == Decimal("0.95")
+
+    def test_calculate_liquidations_real_trades(self):
+        """Test Mode 1: Processing real trade data."""
+        import pandas as pd
+        model = BinanceStandardModel()
+        
+        # Create mock aggTrades data
+        trades = pd.DataFrame([
+            {"price": 60000.0, "gross_value": 10000.0, "side": "buy", "timestamp": 12345},
+            {"price": 60000.0, "gross_value": 5000.0, "side": "sell", "timestamp": 12346}
+        ])
+        
+        current_price = Decimal("60000")
+        open_interest = Decimal("1000000")
+        
+        # Run calculation with real trades
+        liquidations = model.calculate_liquidations(
+            current_price, open_interest, large_trades=trades, leverage_tiers=[10]
+        )
+        
+        # Should have results for both buy and sell trades
+        assert len(liquidations) > 0
+        
+        # Separate results
+        longs = [l for l in liquidations if l.side == "long"]
+        shorts = [l for l in liquidations if l.side == "short"]
+        
+        # Long entries (buy) should result in liquidations BELOW 60000
+        for l in longs:
+            assert l.price_level < Decimal("60000")
+            
+        # Short entries (sell) should result in liquidations ABOVE 60000
+        for s in shorts:
+            assert s.price_level > Decimal("60000")
