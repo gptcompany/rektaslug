@@ -7,23 +7,20 @@
     <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-    <h1 id="pageTitle"></h1>
-    <p id="lastDataPoint" style="color: #8b949e; margin-top: -10px; margin-bottom: 10px; font-size: 0.9em;"></p>
-    <span id="currentPrice" style="color: #f0b90b; font-weight: bold;"></span>
+<body style="background: #fff; margin: 0; padding: 0;">
+    <h1 id="pageTitle" style="display: none;"></h1>
+    <p id="lastDataPoint" style="display: none;"></p>
+    <span id="currentPrice" style="display: none;"></span>
     <div id="liquidation-map" style="width: 100%; height: 600px;"></div>
 
     <script>
-        // Leverage tier colors (matches Coinglass style)
-        const LEVERAGE_COLORS = {
-            '5x': '#5dd3d3',   // Cyan
-            '10x': '#6ba3ff',  // Blue
-            '25x': '#4a90e2',  // Dark Blue
-            '50x': '#ff9f40',  // Orange
-            '100x': '#ff6384'  // Pink/Red
+        // 3 Leverage groups (Coinank style)
+        const LEVERAGE_GROUPS = {
+            'Low leverage':    { tiers: ['5x', '10x'],   color: '#5B8FF9' },
+            'Medium leverage': { tiers: ['25x', '50x'],  color: '#B37FEB' },
+            'High leverage':   { tiers: ['100x'],         color: '#FF9C6E' }
         };
 
-        // Read symbol from URL path: /liq_map_1w/BTCUSDT or ?symbol=BTCUSDT
         function getSymbol() {
             const urlParams = new URLSearchParams(window.location.search);
             return urlParams.get('symbol') || 'BTCUSDT';
@@ -52,10 +49,6 @@
             return days === 1 ? '1D' : '1W';
         }
 
-        // Read chart mode from URL: ?chart=area or ?chart=bar (default: bar)
-        const urlParams = new URLSearchParams(window.location.search);
-        const CHART_MODE = urlParams.get('chart') || 'bar';
-
         async function loadLevels() {
             const symbol = getSymbol();
             const exchange = getExchange();
@@ -64,6 +57,7 @@
             const exchangeLabel = formatExchangeLabel(exchange);
             const timeframeLabel = getTimeframeLabel(timeframeDays);
             const timeframeTitle = getTimeframeTitle(timeframeDays);
+            // Still set for backward compat, but hidden via CSS
             document.getElementById('pageTitle').textContent =
                 `${displaySymbol} Liquidation Map - ${timeframeLabel} (${exchangeLabel})`;
             document.title = `${displaySymbol} Liquidation Map - ${timeframeTitle} (${exchangeLabel})`;
@@ -81,103 +75,79 @@
             }
         }
 
-        function buildBarTraces(longsByLeverage, shortsByLeverage, seenLeverages) {
-            const traces = [];
-            Object.keys(longsByLeverage).sort().forEach(leverage => {
-                const levels = longsByLeverage[leverage];
-                const showInLegend = !seenLeverages.has(leverage);
-                seenLeverages.add(leverage);
-                traces.push({
-                    x: levels.map(l => parseFloat(l.price_level)),
-                    y: levels.map(l => parseFloat(l.volume)),
-                    type: 'bar',
-                    name: `${leverage} Leverage`,
-                    marker: { color: LEVERAGE_COLORS[leverage] || '#888' },
-                    hovertemplate: `Price: $%{x}<br>Volume: %{y:.2f}<br>Leverage: ${leverage}<extra></extra>`,
-                    legendgroup: leverage,
-                    showlegend: showInLegend,
-                    yaxis: 'y'
+        // Group raw liquidations by the 3 leverage groups, aggregating volumes per price level
+        function groupByLeverageGroups(liquidations) {
+            const grouped = {};
+            for (const [groupName, groupDef] of Object.entries(LEVERAGE_GROUPS)) {
+                const priceMap = {};
+                liquidations.forEach(liq => {
+                    if (groupDef.tiers.includes(liq.leverage)) {
+                        const price = liq.price_level;
+                        if (!priceMap[price]) {
+                            priceMap[price] = { price_level: price, volume: 0 };
+                        }
+                        priceMap[price].volume += parseFloat(liq.volume);
+                    }
                 });
-            });
-            Object.keys(shortsByLeverage).sort().forEach(leverage => {
-                const levels = shortsByLeverage[leverage];
-                const showInLegend = !seenLeverages.has(leverage);
-                seenLeverages.add(leverage);
-                traces.push({
-                    x: levels.map(l => parseFloat(l.price_level)),
-                    y: levels.map(l => parseFloat(l.volume)),
-                    type: 'bar',
-                    name: `${leverage} Leverage`,
-                    marker: { color: LEVERAGE_COLORS[leverage] || '#888' },
-                    hovertemplate: `Price: $%{x}<br>Volume: %{y:.2f}<br>Leverage: ${leverage}<extra></extra>`,
-                    legendgroup: leverage,
-                    showlegend: showInLegend,
-                    yaxis: 'y'
-                });
-            });
-            return traces;
+                grouped[groupName] = Object.values(priceMap);
+            }
+            return grouped;
         }
 
-        function buildAreaTraces(longsByLeverage, shortsByLeverage, seenLeverages) {
+        function buildBarTraces(longsGrouped, shortsGrouped) {
             const traces = [];
 
-            function addAreaTrace(levels, leverage, stackGroup, showInLegend) {
-                const sorted = [...levels].sort((a, b) => parseFloat(a.price_level) - parseFloat(b.price_level));
+            // Longs: show in legend (first occurrence of each group)
+            for (const [groupName, groupDef] of Object.entries(LEVERAGE_GROUPS)) {
+                const longLevels = longsGrouped[groupName] || [];
                 traces.push({
-                    x: sorted.map(l => parseFloat(l.price_level)),
-                    y: sorted.map(l => parseFloat(l.volume)),
-                    type: 'scatter',
-                    mode: 'lines',
-                    name: `${leverage} Leverage`,
-                    line: { width: 0.5, color: LEVERAGE_COLORS[leverage] || '#888' },
-                    fillcolor: (LEVERAGE_COLORS[leverage] || '#888') + 'AA',
-                    stackgroup: stackGroup,
-                    hovertemplate: `Price: $%{x}<br>Volume: %{y:.2f}<br>Leverage: ${leverage}<extra></extra>`,
-                    legendgroup: leverage,
-                    showlegend: showInLegend,
+                    x: longLevels.map(l => parseFloat(l.price_level)),
+                    y: longLevels.map(l => l.volume),
+                    type: 'bar',
+                    name: groupName,
+                    marker: { color: groupDef.color },
+                    hovertemplate: `Price: %{x}<br>Volume: %{y:.2f}<br>${groupName}<extra></extra>`,
+                    legendgroup: groupName,
+                    showlegend: true,
                     yaxis: 'y'
                 });
             }
 
-            Object.keys(longsByLeverage).sort().forEach(leverage => {
-                const showInLegend = !seenLeverages.has(leverage);
-                seenLeverages.add(leverage);
-                addAreaTrace(longsByLeverage[leverage], leverage, 'long', showInLegend);
-            });
-
-            Object.keys(shortsByLeverage).sort().forEach(leverage => {
-                const showInLegend = !seenLeverages.has(leverage);
-                seenLeverages.add(leverage);
-                addAreaTrace(shortsByLeverage[leverage], leverage, 'short', showInLegend);
-            });
+            // Shorts: hide from legend (same legendgroup as longs)
+            for (const [groupName, groupDef] of Object.entries(LEVERAGE_GROUPS)) {
+                const shortLevels = shortsGrouped[groupName] || [];
+                traces.push({
+                    x: shortLevels.map(l => parseFloat(l.price_level)),
+                    y: shortLevels.map(l => l.volume),
+                    type: 'bar',
+                    name: groupName,
+                    marker: { color: groupDef.color },
+                    hovertemplate: `Price: %{x}<br>Volume: %{y:.2f}<br>${groupName}<extra></extra>`,
+                    legendgroup: groupName,
+                    showlegend: false,
+                    yaxis: 'y'
+                });
+            }
 
             return traces;
         }
 
         function renderLiquidationMap(data, symbol) {
             const currentPrice = parseFloat(data.current_price);
-            document.getElementById('currentPrice').textContent = `Current Price: $${currentPrice.toLocaleString()}`;
 
-            // Show last data point timestamp
+            // Show last data point timestamp (hidden DOM element, kept for compatibility)
             const lastTs = data.last_data_timestamp || new Date().toISOString();
             const lastDate = new Date(lastTs);
             document.getElementById('lastDataPoint').textContent =
                 `Last data: ${lastDate.toISOString().replace('T', ' ').substring(0, 19)} UTC`;
 
-            // Group by leverage tier
-            const longsByLeverage = groupByLeverage(data.long_liquidations);
-            const shortsByLeverage = groupByLeverage(data.short_liquidations);
+            // Group by 3 leverage groups
+            const longsGrouped = groupByLeverageGroups(data.long_liquidations);
+            const shortsGrouped = groupByLeverageGroups(data.short_liquidations);
 
-            const seenLeverages = new Set();
-            let traces;
+            let traces = buildBarTraces(longsGrouped, shortsGrouped);
 
-            if (CHART_MODE === 'area') {
-                traces = buildAreaTraces(longsByLeverage, shortsByLeverage, seenLeverages);
-            } else {
-                traces = buildBarTraces(longsByLeverage, shortsByLeverage, seenLeverages);
-            }
-
-            // Calculate cumulative distributions (Coinglass style: start from current price)
+            // Calculate cumulative distributions (raw data, not grouped)
             const allPrices = [...new Set([
                 ...data.long_liquidations.map(l => parseFloat(l.price_level)),
                 ...data.short_liquidations.map(l => parseFloat(l.price_level))
@@ -186,122 +156,136 @@
             const cumulativeLong = calculateCumulative(data.long_liquidations, allPrices, currentPrice, true);
             const cumulativeShort = calculateCumulative(data.short_liquidations, allPrices, currentPrice, false);
 
-            // Cumulative Long line (red, descending from left)
+            // Cumulative Long line with fill (red, descending from right)
             traces.push({
                 x: cumulativeLong.prices,
                 y: cumulativeLong.values,
                 type: 'scatter',
                 mode: 'lines',
-                name: 'Cumulative Long Liquidation Leverage',
-                line: { color: '#d9024b', width: 2 },
+                name: 'Cumulative Long',
+                fill: 'tozeroy',
+                fillcolor: 'rgba(232, 104, 74, 0.12)',
+                line: { color: '#E8684A', width: 2 },
+                showlegend: false,
                 yaxis: 'y2'
             });
 
-            // Cumulative Short line (green, ascending from left)
+            // Cumulative Short line with fill (green, ascending from left)
             traces.push({
                 x: cumulativeShort.prices,
                 y: cumulativeShort.values,
                 type: 'scatter',
                 mode: 'lines',
-                name: 'Cumulative Short Liquidation Leverage',
-                line: { color: '#45bf87', width: 2 },
+                name: 'Cumulative Short',
+                fill: 'tozeroy',
+                fillcolor: 'rgba(90, 216, 166, 0.12)',
+                line: { color: '#5AD8A6', width: 2 },
+                showlegend: false,
                 yaxis: 'y2'
             });
 
-            // Current price vertical line
-            const allVolumes = [
-                ...data.long_liquidations.map(l => parseFloat(l.volume)),
-                ...data.short_liquidations.map(l => parseFloat(l.volume))
-            ];
-            const maxVolume = allVolumes.length > 0 ? Math.max(...allVolumes) : 0;
-
+            // Current price bottom red dot marker
             traces.push({
-                x: [currentPrice, currentPrice],
-                y: [0, maxVolume],
+                x: [currentPrice],
+                y: [0],
                 type: 'scatter',
-                mode: 'lines',
-                name: `Current Price: ${currentPrice}`,
-                line: { color: '#ff0000', width: 2, dash: 'dash' },
+                mode: 'markers',
+                marker: { color: '#ff0000', size: 8 },
+                showlegend: false,
                 hoverinfo: 'skip',
                 yaxis: 'y'
             });
 
             const layout = {
                 xaxis: {
-                    title: 'Price Level (USD)',
                     showgrid: true,
-                    gridcolor: '#30363d',
-                    tickformat: ',.0f'
+                    gridcolor: '#f0f0f0',
+                    tickformat: '.0f',
+                    rangeslider: { visible: true, thickness: 0.05 }
                 },
                 yaxis: {
-                    title: 'Liquidation Volume',
                     showgrid: true,
-                    gridcolor: '#30363d',
-                    side: 'left'
+                    gridcolor: '#f0f0f0',
+                    side: 'left',
+                    tickformat: '.2s'
                 },
                 yaxis2: {
-                    title: 'Cumulative Liquidation Leverage',
                     overlaying: 'y',
                     side: 'right',
-                    showgrid: false
+                    showgrid: false,
+                    tickformat: '.2s'
                 },
-                paper_bgcolor: '#0d1117',
-                plot_bgcolor: '#0d1117',
-                font: { color: '#c9d1d9' },
+                paper_bgcolor: '#ffffff',
+                plot_bgcolor: '#ffffff',
+                font: { color: '#333333', family: 'Arial, sans-serif' },
                 barmode: 'stack',
                 bargap: 0.1,
                 legend: {
                     orientation: 'h',
                     yanchor: 'bottom',
                     y: 1.02,
-                    xanchor: 'right',
-                    x: 1
+                    xanchor: 'center',
+                    x: 0.5,
+                    font: { size: 13 },
+                    bgcolor: 'rgba(255,255,255,0)'
                 },
                 hovermode: 'closest',
-                margin: { t: 30 }
+                margin: { t: 60, b: 40 },
+                // Current price: dashed vertical line (full height)
+                shapes: [{
+                    type: 'line',
+                    x0: currentPrice, x1: currentPrice,
+                    y0: 0, y1: 1, yref: 'paper',
+                    line: { color: '#ff0000', width: 1.5, dash: 'dash' }
+                }],
+                // Current price: annotation label above chart
+                annotations: [{
+                    x: currentPrice,
+                    y: 1.06,
+                    xref: 'x',
+                    yref: 'paper',
+                    text: `Current Price: ${Math.round(currentPrice)}`,
+                    showarrow: true,
+                    arrowhead: 2,
+                    arrowcolor: '#ff0000',
+                    arrowwidth: 2,
+                    ax: 0,
+                    ay: -25,
+                    font: { color: '#333', size: 13 }
+                }]
             };
 
             Plotly.newPlot('liquidation-map', traces, layout, {responsive: true});
         }
 
-        function groupByLeverage(liquidations) {
-            const grouped = {};
-            liquidations.forEach(liq => {
-                const leverage = liq.leverage;
-                if (!grouped[leverage]) {
-                    grouped[leverage] = [];
-                }
-                grouped[leverage].push(liq);
-            });
-            return grouped;
-        }
-
         function calculateCumulative(liquidations, allPrices, currentPrice, isLong = false) {
-            const prices = [];
-            const values = [];
+            // Pre-build volume map in single pass: O(N)
+            const volumeMap = {};
+            liquidations.forEach(l => {
+                const price = parseFloat(l.price_level);
+                volumeMap[price] = (volumeMap[price] || 0) + parseFloat(l.volume);
+            });
+
             const sortedPrices = [...allPrices].sort((a, b) => a - b);
+            const prices = new Array(sortedPrices.length);
+            const values = new Array(sortedPrices.length);
 
             if (isLong) {
+                // Cumulative from right (descending)
                 let cumulativeSum = 0;
                 for (let i = sortedPrices.length - 1; i >= 0; i--) {
-                    const price = sortedPrices[i];
-                    const volumeAtPrice = liquidations
-                        .filter(l => parseFloat(l.price_level) === price)
-                        .reduce((sum, l) => sum + parseFloat(l.volume), 0);
-                    cumulativeSum += volumeAtPrice;
-                    prices.unshift(price);
-                    values.unshift(cumulativeSum);
+                    cumulativeSum += volumeMap[sortedPrices[i]] || 0;
+                    prices[i] = sortedPrices[i];
+                    values[i] = cumulativeSum;
                 }
             } else {
+                // Cumulative from left (ascending)
                 let cumulativeSum = 0;
-                sortedPrices.forEach(price => {
-                    const volumeAtPrice = liquidations
-                        .filter(l => parseFloat(l.price_level) === price)
-                        .reduce((sum, l) => sum + parseFloat(l.volume), 0);
-                    cumulativeSum += volumeAtPrice;
-                    prices.push(price);
-                    values.push(cumulativeSum);
-                });
+                for (let i = 0; i < sortedPrices.length; i++) {
+                    cumulativeSum += volumeMap[sortedPrices[i]] || 0;
+                    prices[i] = sortedPrices[i];
+                    values[i] = cumulativeSum;
+                }
             }
 
             return { prices, values };
