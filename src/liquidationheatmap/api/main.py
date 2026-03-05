@@ -723,6 +723,17 @@ async def refresh_connections():
         return result
 
 
+async def _warmup_read_connection():
+    """Warms up DuckDB read connection in a background thread."""
+    try:
+        # 440GB DB takes time to read metadata; do it in a thread to keep event loop alive
+        db = await asyncio.to_thread(DuckDBService, read_only=True)
+        await asyncio.to_thread(db.conn.execute, "SELECT 1")
+        logger.info("Gap-fill: read connections restored (background)")
+    except Exception as e:
+        logger.warning("Gap-fill: failed to restore read connections: %s", e)
+
+
 @app.post("/api/v1/gap-fill", dependencies=[Depends(_require_internal_token)])
 async def gap_fill(
     dry_run: bool = Query(False, description="Count available data without writing"),
@@ -799,16 +810,12 @@ async def gap_fill(
             content={"status": "error", "message": str(e)},
         )
     finally:
-        # 4. Always release ingestion lock and warm up read connections
+        # 4. Always release ingestion lock
         DuckDBService.release_ingestion_lock()
-        try:
-            db = DuckDBService(read_only=True)
-            db.conn.execute("SELECT 1").fetchone()
-            logger.info("Gap-fill: read connections restored")
-        except Exception as e:
-            logger.warning("Gap-fill: failed to restore read connections: %s", e)
         # 5. Release serialization lock
         _gap_fill_lock.release()
+        # 6. Warmup in background — non-blocking response
+        asyncio.create_task(_warmup_read_connection())
 
 
 @app.get("/data/date-range")
