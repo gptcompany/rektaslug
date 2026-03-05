@@ -152,6 +152,8 @@ LiquidationHeatmap/
 - 10GB CSV loaded in ~5 seconds (zero-copy)
 - 1.9B trades → 7K row cache (99.9996% reduction)
 - Streaming ingestion prevents OOM on large datasets
+- Gap-fill write connections use `SET memory_limit='1GB'` to cap DuckDB WAL checkpoint memory
+- Container memory limit: 2GB (WAL checkpoint on 440GB DB requires ~1GB+ RSS)
 
 **Database Schema**:
 ```sql
@@ -175,6 +177,31 @@ CREATE INDEX idx_aggtrades_timestamp_symbol ON aggtrades_history(timestamp, symb
 CREATE INDEX idx_aggtrades_timestamp ON aggtrades_history(timestamp);
 CREATE INDEX idx_aggtrades_symbol ON aggtrades_history(symbol);
 CREATE INDEX idx_aggtrades_exchange ON aggtrades_history(exchange);
+
+-- Klines history (gap-filled from ccxt-data-pipeline Parquet catalog)
+-- klines_5m_history and klines_1m_history share same schema
+CREATE TABLE klines_5m_history (
+    open_time TIMESTAMP NOT NULL,
+    symbol VARCHAR(20) NOT NULL,
+    open DOUBLE, high DOUBLE, low DOUBLE, close DOUBLE, volume DOUBLE,
+    PRIMARY KEY (open_time, symbol)
+);
+-- klines_1m_history: same schema, bootstrapped with 8-day lookback
+-- Open Interest and Funding Rate history
+CREATE TABLE open_interest_history (
+    timestamp TIMESTAMP NOT NULL,
+    symbol VARCHAR(20) NOT NULL,
+    open_interest DOUBLE,
+    source VARCHAR(20) DEFAULT 'ccxt',
+    PRIMARY KEY (timestamp, symbol, source)
+);
+CREATE TABLE funding_rate_history (
+    timestamp TIMESTAMP NOT NULL,
+    symbol VARCHAR(20) NOT NULL,
+    funding_rate DOUBLE,
+    funding_interval_hours INTEGER DEFAULT 8,
+    PRIMARY KEY (timestamp, symbol)
+);
 
 -- Pre-aggregated volume profile (cache)
 CREATE TABLE volume_profile_daily (

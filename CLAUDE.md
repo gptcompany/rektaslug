@@ -41,7 +41,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Processed Storage**: `/media/sam/2TB-NVMe/liquidationheatmap_db/liquidations.duckdb` (NVMe for fast I/O)
 - **N8N Container Path**: `/workspace/2TB-NVMe/liquidationheatmap_db/liquidations.duckdb`
 - **Pipeline**: Zero-copy CSV ingestion via `COPY FROM` (10GB in ~5 seconds)
-- **Schema**: aggtrades_history, klines_*_history, open_interest_history, heatmap_cache
+- **Schema**: aggtrades_history, klines_5m_history, klines_1m_history, open_interest_history, funding_rate_history, heatmap_cache
 - **Responsible Agent**: `data-engineer`
 
 ### Layer 2: Calculation & API (FastAPI + Redis)
@@ -143,6 +143,8 @@ Il PC è spesso sotto stress (DuckDB su 6B+ righe, multi-agent, build parallele)
   ```
 - **Volume profile cache**: usare `CREATE TABLE ... AS SELECT ... WHERE year=X` anno per anno, MAI full scan
 - **Ingestioni CSV**: sequenziali, una alla volta, con I/O throttle (100ms minimo tra file)
+- **Container memory**: il limite è 2GB (`docker-compose.yml`). DuckDB WAL checkpoint su un DB da 440GB richiede ~1GB+ RSS. Con 1GB di limite il kernel OOM killer termina silenziosamente il processo.
+- **DuckDB write connections**: SEMPRE impostare `SET memory_limit='1GB'` per evitare che il WAL checkpoint esaurisca la RAM del container. Non fare warmup eager (apertura read-only) dopo gap-fill: il sync script chiama `/api/v1/refresh-connections`.
 
 ---
 
@@ -151,7 +153,9 @@ Il PC è spesso sotto stress (DuckDB su 6B+ righe, multi-agent, build parallele)
 ### DuckDB Lock & Fallback (rektaslug)
 - **Lock Contention**: Il sistema gestisce i lock DuckDB tramite file (`.ingestion_lock`). Se occupato, l'API restituisce `503 Service Unavailable` con `Retry-After`.
 - **Shell Fallback**: Gli script `run-ingestion.sh` e `run-ccxt-gap-fill.sh` riprovano l'accesso e passano alla CLI (`uv run`) se l'API è offline (404/000).
-- **Non-fatal Skip**: Errori di lock durante i cicli di 5 minuti sono trattati come non fatali (exit 0) per evitare falsi allarmi.
+- **Non-fatal Skip**: Errori di lock durante i cicli di 5 minuti sono trattati come non fatali (exit 0, prefisso `SKIPPED_LOCK_CONTENTION:`) per evitare falsi allarmi.
+- **Lifespan Hook**: All'avvio, il lifespan hook di FastAPI rimuove lock file stale (`/tmp/duckdb-ingestion.lock`) lasciati da crash precedenti.
+- **Gap-fill timeout**: Il curl per `/api/v1/gap-fill` ha timeout 120s (il gap-fill impiega ~31s con cache warm a causa del metadata loading di DuckDB su 440GB).
 
 ### Parquet Storage (ccxt-data-pipeline)
 - **Corruption Resilience**: La lettura dei file Parquet è isolata; file corrotti vengono loggati e saltati senza interrompere l'intera pipeline.
