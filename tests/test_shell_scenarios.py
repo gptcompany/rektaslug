@@ -97,7 +97,8 @@ class TestShellScenariosMocked:
             env=mock_env, capture_output=True, text=True
         )
         assert result.returncode == 0
-        assert "Gap-fill API lock contention, skipping" in result.stdout
+        assert "SKIPPED_LOCK_CONTENTION:" in result.stdout
+        assert "lock contention" in result.stdout.lower()
 
     def test_run_ingestion_dry_run(self, mock_env):
         """Test main ingestion script in dry-run mode."""

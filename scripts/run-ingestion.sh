@@ -148,7 +148,7 @@ prepare_database() {
             return 0
         else
             if [ $attempt -eq $MAX_RETRIES ]; then
-                log "ERROR: Cannot acquire database write lock after $MAX_RETRIES attempts"
+                log "SKIPPED_LOCK_CONTENTION: Cannot acquire database write lock after $MAX_RETRIES attempts"
                 ps aux | grep -E "python.*duckdb|ingest" | grep -v grep || true
                 return 1
             fi
@@ -197,11 +197,15 @@ ingest_aggtrades() {
                 --mode dry-run \
                 --throttle-ms 200 || { log "FAILED: ${symbol} aggTrades (dry-run)"; failed=$((failed + 1)); }
         else
+            # Daily incremental: ingest recent window explicitly so trailing
+            # days are imported even when there are no "internal" DB gaps.
             uv run --project "$PROJECT_DIR" python "${PROJECT_DIR}/ingest_full_history_n8n.py" \
                 --symbol "$symbol" \
                 --data-dir "$DATA_DIR" \
                 --db "$DB_PATH" \
-                --mode auto \
+                --mode full \
+                --start-date "$WEEK_AGO" \
+                --end-date "$YESTERDAY" \
                 --throttle-ms 200 || { log "FAILED: ${symbol} aggTrades"; failed=$((failed + 1)); }
         fi
     done
@@ -351,6 +355,29 @@ fill_gap_from_ccxt() {
         log "Running gap fill in dry-run mode"
     fi
 
+    run_gap_fill_cli_fallback() {
+        local reason="$1"
+        local -a symbol_args=()
+        local -a cmd=()
+        local symbol
+
+        for symbol in $SYMBOLS; do
+            symbol_args+=("$symbol")
+        done
+
+        log "Gap fill API unavailable (${reason}), falling back to direct CLI execution"
+        cmd=(
+            uv run --project "$PROJECT_DIR" python "${PROJECT_DIR}/scripts/fill_gap_from_ccxt.py"
+            --symbols "${symbol_args[@]}"
+            --ccxt-catalog "$CCXT_CATALOG"
+            --db "$DB_PATH"
+        )
+        if [ "$MODE" = "dry-run" ]; then
+            cmd+=(--dry-run)
+        fi
+        "${cmd[@]}"
+    }
+
     # Delegate to in-process API endpoint (avoids DuckDB cross-process lock)
     local token_header=""
     if [ -n "${REKTSLUG_INTERNAL_TOKEN:-}" ]; then
@@ -360,7 +387,7 @@ fill_gap_from_ccxt() {
     local response
     response=$(curl -s -w "\n%{http_code}" --max-time 120 \
         $token_header \
-        -X POST "${API_URL}/api/v1/gap-fill${dry_run_param}")
+        -X POST "${API_URL}/api/v1/gap-fill${dry_run_param}" 2>/dev/null || true)
 
     local http_code body
     http_code=$(echo "$response" | tail -1)
@@ -370,8 +397,18 @@ fill_gap_from_ccxt() {
         log "Gap fill via API: $body"
         return 0
     elif [ "$http_code" = "409" ]; then
-        log "Gap fill already in progress, skipping"
+        log "SKIPPED_LOCK_CONTENTION: Gap fill already in progress, skipping"
         return 0
+    elif [ "$http_code" = "500" ] && echo "$body" | grep -qiE "Could not set lock|Conflicting lock"; then
+        log "SKIPPED_LOCK_CONTENTION: Gap fill API lock contention, skipping"
+        return 0
+    elif [ "$http_code" = "404" ] || [ "$http_code" = "405" ] || [ "$http_code" = "000" ] || [ -z "$http_code" ]; then
+        log "Gap fill endpoint not available (HTTP ${http_code}): ${body:-no response body}"
+        if run_gap_fill_cli_fallback "http_${http_code:-unknown}"; then
+            return 0
+        fi
+        log "FAILED: Gap fill fallback CLI failed"
+        return 1
     else
         log "FAILED: Gap fill (HTTP ${http_code}): $body"
         return 1

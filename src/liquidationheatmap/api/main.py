@@ -5,6 +5,7 @@ import json
 import logging
 import time
 from collections import defaultdict
+from contextlib import asynccontextmanager
 from decimal import Decimal
 from typing import Literal, Optional
 from urllib.request import urlopen
@@ -296,10 +297,39 @@ TIME_WINDOW_CONFIG: dict[str, dict] = {
     "1y": {"hours": 8760, "klines_interval": "1d", "agg_minutes": 1440},
 }
 
+# Serialization lock for in-process gap-fill (one execution at a time)
+_gap_fill_lock = asyncio.Lock()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup/shutdown lifecycle hook.
+
+    Startup: clean stale ingestion lock file left by a previous crash.
+    Shutdown: release residual locks so the next restart starts clean.
+    """
+    from ..ingestion.db_service import INGESTION_LOCK_FILE
+
+    # --- startup ---
+    if INGESTION_LOCK_FILE.exists():
+        logger.warning(
+            "Lifespan startup: removing stale ingestion lock file %s",
+            INGESTION_LOCK_FILE,
+        )
+        INGESTION_LOCK_FILE.unlink(missing_ok=True)
+
+    logger.info("Lifespan startup: _gap_fill_lock.locked()=%s", _gap_fill_lock.locked())
+    yield
+    # --- shutdown ---
+    DuckDBService.release_ingestion_lock()
+    logger.info("Lifespan shutdown: ingestion lock released")
+
+
 app = FastAPI(
     title="Liquidation Heatmap API",
     description="Calculate and visualize cryptocurrency liquidation levels",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 # Rate limiting middleware (configurable via RATE_LIMIT_RPM and RATE_LIMIT_ENABLED env vars)
@@ -325,10 +355,6 @@ async def ingestion_lock_handler(request: Request, exc: IngestionLockError):
         },
         headers={"Retry-After": "10"},
     )
-
-
-# Serialization lock for in-process gap-fill (one execution at a time)
-_gap_fill_lock = asyncio.Lock()
 
 
 def _require_internal_token(
@@ -893,6 +919,14 @@ async def get_liquidation_levels(
         description="Minimum trade size in USD (CURRENTLY FIXED AT $500K - parameter non-functional due to pre-aggregated cache limitation)",
         ge=0.0,
     ),
+    kline_interval: Optional[str] = Query(
+        None,
+        description=(
+            "Kline source for OI model: auto (default from runtime settings), 1m, or 5m. "
+            "Auto prefers 1m only when coverage/freshness are healthy."
+        ),
+        pattern="^(auto|1m|5m)$",
+    ),
 ):
     """Calculate liquidation levels using Open Interest distribution model.
 
@@ -954,12 +988,14 @@ async def get_liquidation_levels(
     # Calculate liquidations using OI-based model
     with DuckDBService(read_only=True) as db:
         # OI-based model: distributes current Open Interest based on volume profile
+        effective_kline_interval = kline_interval or _settings.oi_kline_interval
         bins_df = db.calculate_liquidations_oi_based(
             symbol=symbol,
             current_price=current_price,
             bin_size=bin_size,
             lookback_days=timeframe,
             whale_threshold=whale_threshold,
+            kline_interval=effective_kline_interval,
         )
 
         # Bin liquidation prices and aggregate

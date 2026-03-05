@@ -1,7 +1,7 @@
 """Gap-fill logic: bridge ccxt-data-pipeline Parquet -> DuckDB.
 
 Extracted from scripts/fill_gap_from_ccxt.py for in-process use by the API.
-Handles: klines (5m OHLCV), open interest, funding rate.
+Handles: klines (1m + 5m OHLCV), open interest, funding rate.
 Venue: BINANCE only (consistent with CSV pipeline).
 """
 
@@ -14,6 +14,38 @@ import duckdb
 logger = logging.getLogger(__name__)
 
 VENUE = "BINANCE"
+KLINE_INTERVALS = ("5m", "1m")
+# For newly introduced intervals without CSV baseline, bootstrap a bounded window.
+# 8 days covers 1w liq-map lookback with safety margin.
+KLINE_BOOTSTRAP_DAYS_BY_INTERVAL = {"1m": 8}
+
+
+def _kline_minutes(interval: str) -> int:
+    if interval.endswith("m") and interval[:-1].isdigit():
+        return int(interval[:-1])
+    raise ValueError(f"Unsupported kline interval: {interval}")
+
+
+def _ensure_klines_table(con: duckdb.DuckDBPyConnection, interval: str) -> str:
+    table_name = f"klines_{interval}_history"
+    con.execute(f"""
+        CREATE TABLE IF NOT EXISTS {table_name} (
+            open_time TIMESTAMP NOT NULL,
+            symbol VARCHAR NOT NULL,
+            open DECIMAL(18, 8) NOT NULL,
+            high DECIMAL(18, 8) NOT NULL,
+            low DECIMAL(18, 8) NOT NULL,
+            close DECIMAL(18, 8) NOT NULL,
+            volume DECIMAL(18, 8) NOT NULL,
+            close_time TIMESTAMP NOT NULL,
+            quote_volume DECIMAL(20, 8),
+            count INTEGER,
+            taker_buy_volume DECIMAL(18, 8),
+            taker_buy_quote_volume DECIMAL(20, 8),
+            PRIMARY KEY (open_time, symbol)
+        )
+    """)
+    return table_name
 
 
 def parquet_glob(catalog: str, data_type: str, symbol: str) -> str:
@@ -29,43 +61,66 @@ def get_watermark(con: duckdb.DuckDBPyConnection, table: str, ts_col: str, symbo
     return result[0] if result and result[0] else None
 
 
-def fill_klines(con: duckdb.DuckDBPyConnection, catalog: str, symbol: str, dry_run: bool) -> dict:
-    """Fill klines_5m_history gap from OHLCV Parquet files."""
+def _fill_klines_interval(
+    con: duckdb.DuckDBPyConnection,
+    catalog: str,
+    symbol: str,
+    interval: str,
+    dry_run: bool,
+) -> dict:
+    """Fill klines gap for a single interval from OHLCV Parquet files."""
+    minutes = _kline_minutes(interval)
+    table_name = f"klines_{interval}_history"
+    if not dry_run:
+        _ensure_klines_table(con, interval)
     glob_path = parquet_glob(catalog, "ohlcv", symbol)
-    watermark = get_watermark(con, "klines_5m_history", "open_time", symbol)
 
-    if watermark is None:
-        logger.warning("No existing klines for %s, skipping (need CSV baseline first)", symbol)
+    try:
+        watermark = get_watermark(con, table_name, "open_time", symbol)
+    except duckdb.CatalogException:
+        # Table does not exist yet (e.g. dry_run on read-only connection)
+        watermark = None
+
+    bootstrap_days = KLINE_BOOTSTRAP_DAYS_BY_INTERVAL.get(interval)
+
+    if watermark is None and bootstrap_days is None:
+        logger.warning("No existing %s klines for %s, skipping (need CSV baseline first)", interval, symbol)
         return {"inserted": 0, "skipped": "no_baseline"}
 
-    logger.info("Klines watermark for %s: %s", symbol, watermark)
+    if watermark is None and bootstrap_days is not None:
+        # Bootstrap: use a bounded time window instead of requiring CSV baseline
+        logger.info("Bootstrapping %s klines for %s with %d-day window", interval, symbol, bootstrap_days)
+        ts_filter = f"timestamp > (now() - INTERVAL '{bootstrap_days} days')"
+    else:
+        logger.info("Klines %s watermark for %s: %s", interval, symbol, watermark)
+        ts_filter = f"timestamp > TIMESTAMP WITH TIME ZONE '{watermark} UTC'"
 
     try:
         avail = con.execute(f"""
             SELECT COUNT(*) FROM read_parquet('{glob_path}')
             WHERE venue = '{VENUE}'
-              AND timeframe = '5m'
-              AND timestamp > TIMESTAMP '{watermark}'
+              AND timeframe = '{interval}'
+              AND {ts_filter}
         """).fetchone()[0]
     except Exception as e:
-        logger.warning("No Parquet files found for klines %s: %s", symbol, e)
+        logger.warning("No Parquet files found for %s klines %s: %s", interval, symbol, e)
         return {"inserted": 0, "skipped": "no_parquet"}
 
     if avail == 0:
-        logger.info("No new klines data after watermark")
+        logger.info("No new %s klines data after watermark", interval)
         return {"inserted": 0, "skipped": "up_to_date"}
 
-    logger.info("Found %d Parquet rows to fill for %s klines", avail, symbol)
+    logger.info("Found %d Parquet rows to fill for %s %s klines", avail, symbol, interval)
 
     if dry_run:
         return {"inserted": 0, "available": avail, "skipped": "dry_run"}
 
     count_before = con.execute(
-        "SELECT COUNT(*) FROM klines_5m_history WHERE symbol = ?", [symbol]
+        f"SELECT COUNT(*) FROM {table_name} WHERE symbol = ?", [symbol]
     ).fetchone()[0]
 
     con.execute(f"""
-        INSERT OR IGNORE INTO klines_5m_history
+        INSERT OR IGNORE INTO {table_name}
             (open_time, symbol, open, high, low, close, volume,
              close_time, quote_volume, count, taker_buy_volume, taker_buy_quote_volume)
         SELECT
@@ -76,24 +131,40 @@ def fill_klines(con: duckdb.DuckDBPyConnection, catalog: str, symbol: str, dry_r
             CAST(low AS DECIMAL(18, 8)),
             CAST(close AS DECIMAL(18, 8)),
             CAST(volume AS DECIMAL(18, 8)),
-            (timezone('UTC', timestamp)::TIMESTAMP + INTERVAL '5 minutes') AS close_time,
+            (timezone('UTC', timestamp)::TIMESTAMP + INTERVAL '{minutes} minutes') AS close_time,
             NULL AS quote_volume,
             NULL AS count,
             NULL AS taker_buy_volume,
             NULL AS taker_buy_quote_volume
         FROM read_parquet('{glob_path}')
         WHERE venue = '{VENUE}'
-          AND timeframe = '5m'
-          AND timestamp > TIMESTAMP WITH TIME ZONE '{watermark} UTC'
+          AND timeframe = '{interval}'
+          AND {ts_filter}
     """)
 
     count_after = con.execute(
-        "SELECT COUNT(*) FROM klines_5m_history WHERE symbol = ?", [symbol]
+        f"SELECT COUNT(*) FROM {table_name} WHERE symbol = ?", [symbol]
     ).fetchone()[0]
 
     inserted = count_after - count_before
-    logger.info("Klines %s: %d inserted, %d duplicates ignored", symbol, inserted, avail - inserted)
+    logger.info("Klines %s/%s: %d inserted, %d duplicates ignored", interval, symbol, inserted, avail - inserted)
     return {"inserted": inserted, "duplicates": avail - inserted}
+
+
+def fill_klines(con: duckdb.DuckDBPyConnection, catalog: str, symbol: str, dry_run: bool) -> dict:
+    """Fill klines gap for all configured intervals (5m, 1m).
+
+    Returns a dict with per-interval results and total inserted count.
+    """
+    intervals_results: dict[str, dict] = {}
+    total_inserted = 0
+
+    for interval in KLINE_INTERVALS:
+        result = _fill_klines_interval(con, catalog, symbol, interval, dry_run)
+        intervals_results[interval] = result
+        total_inserted += result.get("inserted", 0)
+
+    return {"intervals": intervals_results, "inserted": total_inserted}
 
 
 def fill_open_interest(

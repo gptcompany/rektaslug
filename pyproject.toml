@@ -27,6 +27,7 @@ dependencies = [
     "tqdm>=4.67.1",
     "pyotp>=2.9.0",
     "pycryptodome>=3.23.0",
+    "zstandard>=0.22.0",
 ]
 
 [project.optional-dependencies]
@@ -85,6 +86,10 @@ ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
 "src/liquidationheatmap/api/main.py" = ["E402"]
+
+[tool.mutmut]
+paths_to_mutate = "src/liquidationheatmap/ingestion/gap_fill.py"
+tests_dir = "tests/"
 
 [dependency-groups]
 dev = [

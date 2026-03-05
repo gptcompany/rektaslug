@@ -3,6 +3,11 @@
 import json
 import logging
 import time
+from datetime import datetime, timedelta, timezone
+try:
+    from datetime import UTC
+except ImportError:
+    UTC = timezone.utc
 from decimal import Decimal
 from pathlib import Path
 from typing import Tuple
@@ -764,6 +769,127 @@ class DuckDBService:
         100: 0.10,  # 10% - high risk
     }
 
+    @staticmethod
+    def _kline_table_for_interval(interval: str) -> str:
+        return f"klines_{interval}_history"
+
+    def _table_exists(self, table_name: str) -> bool:
+        row = self.conn.execute(
+            """
+            SELECT 1
+            FROM information_schema.tables
+            WHERE lower(table_schema) = 'main'
+              AND lower(table_name) = lower(?)
+            LIMIT 1
+            """,
+            [table_name],
+        ).fetchone()
+        return bool(row)
+
+    def _has_kline_coverage(
+        self,
+        table_name: str,
+        symbol: str,
+        lookback_days: int,
+        expected_per_day: int,
+        min_ratio: float,
+        freshness_minutes: int = 20,
+    ) -> bool:
+        if not self._table_exists(table_name):
+            return False
+
+        max_ts_row = self.conn.execute(
+            f"SELECT MAX(open_time) FROM {table_name} WHERE symbol = ?",
+            [symbol],
+        ).fetchone()
+        if not max_ts_row or max_ts_row[0] is None:
+            return False
+
+        max_ts = max_ts_row[0]
+        now_utc = datetime.now(UTC).replace(tzinfo=None)
+        if max_ts < now_utc - timedelta(minutes=freshness_minutes):
+            return False
+
+        start_ts = max_ts - timedelta(days=lookback_days)
+        count_row = self.conn.execute(
+            f"""
+            SELECT COUNT(*)
+            FROM {table_name}
+            WHERE symbol = ?
+              AND open_time >= ?
+            """,
+            [symbol, start_ts],
+        ).fetchone()
+        count = count_row[0] if count_row else 0
+
+        expected = max(1, lookback_days * expected_per_day)
+        coverage_ratio = count / expected
+        return coverage_ratio >= min_ratio
+
+    def _resolve_oi_kline_source(
+        self,
+        symbol: str,
+        lookback_days: int,
+        kline_interval: str = "auto",
+    ) -> tuple[str, str]:
+        """Select klines table for OI-based model with robust fallback.
+
+        Returns:
+            (table_name, interval_used)
+        """
+        requested = (kline_interval or "auto").lower()
+        if requested not in {"auto", "1m", "5m"}:
+            raise ValueError(f"Unsupported kline_interval={kline_interval!r}")
+
+        table_1m = self._kline_table_for_interval("1m")
+        table_5m = self._kline_table_for_interval("5m")
+
+        has_1m = self._has_kline_coverage(
+            table_1m,
+            symbol,
+            lookback_days=lookback_days,
+            expected_per_day=1440,
+            min_ratio=0.60,
+        )
+        has_5m = self._has_kline_coverage(
+            table_5m,
+            symbol,
+            lookback_days=lookback_days,
+            expected_per_day=288,
+            min_ratio=0.50,
+        )
+
+        if requested == "1m":
+            if has_1m:
+                return table_1m, "1m"
+            if has_5m:
+                logger.warning(
+                    "Requested 1m klines for %s but coverage is insufficient; falling back to 5m",
+                    symbol,
+                )
+                return table_5m, "5m"
+            raise ValueError(f"No usable kline data for symbol={symbol}")
+
+        if requested == "5m":
+            if has_5m:
+                return table_5m, "5m"
+            if has_1m:
+                logger.warning(
+                    "Requested 5m klines for %s but coverage is insufficient; falling back to 1m",
+                    symbol,
+                )
+                return table_1m, "1m"
+            raise ValueError(f"No usable kline data for symbol={symbol}")
+
+        # auto policy: prefer 1m only for short windows where higher granularity matters.
+        if lookback_days <= 7 and has_1m:
+            return table_1m, "1m"
+        if has_5m:
+            return table_5m, "5m"
+        if has_1m:
+            return table_1m, "1m"
+        raise ValueError(f"No usable kline data for symbol={symbol}")
+
     def calculate_liquidations_oi_based(
         self,
         symbol: str = "BTCUSDT",
@@ -772,6 +898,7 @@ class DuckDBService:
         lookback_days: int = 30,
         whale_threshold: float = 500000.0,
         leverage_weights: dict[int, float] | None = None,
+        kline_interval: str = "auto",
     ):
         """Calculate liquidations using Open Interest-based volume profile scaling.
 
@@ -798,6 +925,9 @@ class DuckDBService:
             whale_threshold: Whale trade threshold (currently non-functional, see warning)
             leverage_weights: Override leverage distribution {leverage: weight}.
                 Defaults to DEFAULT_LEVERAGE_WEIGHTS. Weights must sum to 1.0.
+            kline_interval: Candle source for OI model ("auto", "1m", or "5m").
+                "auto" prefers 1m for short windows (<=7d) when coverage is healthy,
+                otherwise falls back to 5m for better stability and OI alignment.
 
         Returns:
             DataFrame with columns: price_bucket, leverage, side, volume, liq_price
@@ -808,6 +938,18 @@ class DuckDBService:
 
         logger.info(
             f"calculate_liquidations_oi_based: symbol={symbol}, lookback={lookback_days}d, bin_size={bin_size}"
+        )
+
+        kline_table, kline_interval_used = self._resolve_oi_kline_source(
+            symbol=symbol,
+            lookback_days=lookback_days,
+            kline_interval=kline_interval,
+        )
+        logger.info(
+            "OI model kline source: requested=%s selected=%s table=%s",
+            kline_interval,
+            kline_interval_used,
+            kline_table,
         )
 
         # IMPORTANT: Warn if non-default whale_threshold is used (parameter currently non-functional)
@@ -843,7 +985,7 @@ class DuckDBService:
             SELECT
                 (SELECT open_interest_value FROM open_interest_history
                  WHERE symbol = ? ORDER BY timestamp DESC LIMIT 1) AS latest_oi,
-                (SELECT MAX(open_time) FROM klines_5m_history WHERE symbol = ?)
+                (SELECT MAX(open_time) FROM {kline_table} WHERE symbol = ?)
                     - INTERVAL '{lookback_days} days' AS start_time,
                 {bin_size} AS price_bin_size
         ),
@@ -857,19 +999,19 @@ class DuckDBService:
             ) AS t (leverage, weight)
         ),
 
-        -- STEP 1: Use pre-cached klines_5m_history (PERFECT TIMING ALIGNMENT with OI data!)
-        -- OI data is 5min resolution → 5m candles = perfect match for accurate side inference
-        -- 8,064 rows (5m candles in 30 days) - scans in ~1 second vs 50+ seconds for aggtrades
+        -- STEP 1: Use configured klines table (1m/5m) with OI-bucket alignment.
+        -- OI source remains 5m, so we align each candle to a 5m bucket.
         CandleOHLC AS (
             SELECT
                 open_time as candle_time,
+                time_bucket(INTERVAL '5 minutes', open_time) AS oi_bucket_time,
                 FLOOR(close / {bin_size}) * {bin_size} AS price_bin,
                 open,
                 high,
                 low,
                 close,
-                quote_volume as volume
-            FROM klines_5m_history
+                COALESCE(quote_volume, close * volume) AS volume
+            FROM {kline_table}
             WHERE symbol = ?
               AND open_time >= (SELECT start_time FROM Params)
         ),
@@ -877,7 +1019,7 @@ class DuckDBService:
         -- STEP 2: Compute OI Delta inline via LAG() window function
         OIDelta AS (
             SELECT
-                timestamp as candle_time,
+                timestamp as oi_bucket_time,
                 open_interest_value - LAG(open_interest_value)
                     OVER (ORDER BY timestamp) AS oi_delta
             FROM open_interest_history
@@ -905,7 +1047,7 @@ class DuckDBService:
                     ELSE NULL  -- Ignore neutral candles or OI decrease
                 END as inferred_side
             FROM CandleOHLC c
-            LEFT JOIN OIDelta o ON c.candle_time = o.candle_time
+            LEFT JOIN OIDelta o ON c.oi_bucket_time = o.oi_bucket_time
             WHERE
                 -- Only keep candles with clear signal (non-null side)
                 CASE

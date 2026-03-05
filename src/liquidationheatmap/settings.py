@@ -23,6 +23,14 @@ def _read_csv(name: str, default: tuple[str, ...]) -> tuple[str, ...]:
     return values or default
 
 
+def _read_choice(name: str, default: str, allowed: set[str]) -> str:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    value = raw.strip().lower()
+    return value if value in allowed else default
+
+
 @dataclass(frozen=True)
 class AppSettings:
     """Runtime settings shared by the main API and core helper scripts."""
@@ -41,6 +49,7 @@ class AppSettings:
     cache_ttl: int
     cache_max_size: int
     internal_api_token: str
+    oi_kline_interval: str
 
     @classmethod
     def from_env(cls) -> "AppSettings":
@@ -78,6 +87,11 @@ class AppSettings:
             cache_ttl=int(os.getenv("LH_CACHE_TTL", "300")),
             cache_max_size=int(os.getenv("LH_CACHE_MAX_SIZE", "100")),
             internal_api_token=os.getenv("REKTSLUG_INTERNAL_TOKEN", ""),
+            oi_kline_interval=_read_choice(
+                "HEATMAP_OI_KLINE_INTERVAL",
+                "auto",
+                {"auto", "1m", "5m"},
+            ),
         )
 
 

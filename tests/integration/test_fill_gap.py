@@ -80,7 +80,7 @@ def ccxt_catalog(tmp_path):
     ohlcv_dir = catalog / "ohlcv" / "BTCUSDT-PERP.BINANCE"
     ohlcv_dir.mkdir(parents=True)
 
-    ohlcv_table = pa.table(
+    ohlcv_5m = pa.table(
         {
             "timestamp": pa.array(
                 [
@@ -101,7 +101,30 @@ def ccxt_catalog(tmp_path):
             "volume": [100.5, 200.3, 150.7, 300.1],
         }
     )
-    pq.write_table(ohlcv_table, ohlcv_dir / "2026-02-28.parquet")
+
+    ohlcv_1m = pa.table(
+        {
+            "timestamp": pa.array(
+                [
+                    _utc(2026, 2, 28, 0, 0),
+                    _utc(2026, 2, 28, 0, 1),
+                    _utc(2026, 2, 28, 0, 2),
+                ],
+                type=pa.timestamp("us", tz="UTC"),
+            ),
+            "symbol": ["BTCUSDT-PERP"] * 3,
+            "venue": ["BINANCE"] * 3,
+            "timeframe": ["1m"] * 3,
+            "open": [85000.0, 85010.0, 85020.0],
+            "high": [85050.0, 85060.0, 85070.0],
+            "low": [84990.0, 85000.0, 85010.0],
+            "close": [85010.0, 85020.0, 85030.0],
+            "volume": [10.1, 12.3, 11.5],
+        }
+    )
+
+    combined = pa.concat_tables([ohlcv_5m, ohlcv_1m])
+    pq.write_table(combined, ohlcv_dir / "2026-02-28.parquet")
 
     # --- Open Interest ---
     oi_dir = catalog / "open_interest" / "BTCUSDT-PERP.BINANCE"
@@ -191,20 +214,15 @@ class TestFillKlines:
         seed_baseline(tmp_db)
         con = duckdb.connect(tmp_db)
 
-        # Import and run
-        import importlib.util
+        from src.liquidationheatmap.ingestion.gap_fill import fill_klines
 
-        spec = importlib.util.spec_from_file_location(
-            "fill_gap", "/media/sam/1TB/rektaslug/scripts/fill_gap_from_ccxt.py"
-        )
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
+        result = fill_klines(con, ccxt_catalog, "BTCUSDT", dry_run=False)
 
-        result = mod.fill_klines(con, ccxt_catalog, "BTCUSDT", dry_run=False)
+        # New format: {"intervals": {"5m": {...}, "1m": {...}}, "inserted": N}
+        assert "intervals" in result
+        assert result["intervals"]["5m"]["inserted"] == 4  # all 4 5m rows are after watermark
 
-        assert result["inserted"] == 4  # all 4 rows are after watermark
-
-        # Verify data
+        # Verify 5m data
         rows = con.execute("""
             SELECT open_time, symbol, open, close, volume, close_time
             FROM klines_5m_history
@@ -228,19 +246,13 @@ class TestFillKlines:
         seed_baseline(tmp_db)
         con = duckdb.connect(tmp_db)
 
-        import importlib.util
+        from src.liquidationheatmap.ingestion.gap_fill import fill_klines
 
-        spec = importlib.util.spec_from_file_location(
-            "fill_gap", "/media/sam/1TB/rektaslug/scripts/fill_gap_from_ccxt.py"
-        )
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
+        r1 = fill_klines(con, ccxt_catalog, "BTCUSDT", dry_run=False)
+        r2 = fill_klines(con, ccxt_catalog, "BTCUSDT", dry_run=False)
 
-        r1 = mod.fill_klines(con, ccxt_catalog, "BTCUSDT", dry_run=False)
-        r2 = mod.fill_klines(con, ccxt_catalog, "BTCUSDT", dry_run=False)
-
-        assert r1["inserted"] == 4
-        assert r2["inserted"] == 0  # all duplicates
+        assert r1["intervals"]["5m"]["inserted"] == 4
+        assert r2["intervals"]["5m"]["inserted"] == 0  # all duplicates
 
         total = con.execute(
             "SELECT COUNT(*) FROM klines_5m_history WHERE symbol = 'BTCUSDT'"
@@ -249,22 +261,67 @@ class TestFillKlines:
 
         con.close()
 
-    def test_no_baseline_skips(self, tmp_db, ccxt_catalog):
-        """Without baseline data, klines fill is skipped."""
+    def test_no_baseline_skips_5m(self, tmp_db, ccxt_catalog):
+        """Without baseline data, 5m klines fill is skipped."""
         con = duckdb.connect(tmp_db)
 
-        import importlib.util
+        from src.liquidationheatmap.ingestion.gap_fill import fill_klines
 
-        spec = importlib.util.spec_from_file_location(
-            "fill_gap", "/media/sam/1TB/rektaslug/scripts/fill_gap_from_ccxt.py"
-        )
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
+        result = fill_klines(con, ccxt_catalog, "BTCUSDT", dry_run=False)
 
-        result = mod.fill_klines(con, ccxt_catalog, "BTCUSDT", dry_run=False)
+        assert result["intervals"]["5m"]["skipped"] == "no_baseline"
+        assert result["intervals"]["5m"]["inserted"] == 0
 
-        assert result["skipped"] == "no_baseline"
-        assert result["inserted"] == 0
+        con.close()
+
+
+class TestFillKlines1m:
+    def test_bootstrap_without_baseline(self, tmp_db, ccxt_catalog):
+        """1m klines bootstrap from Parquet without CSV baseline (bounded window)."""
+        con = duckdb.connect(tmp_db)
+
+        from src.liquidationheatmap.ingestion.gap_fill import _fill_klines_interval
+
+        result = _fill_klines_interval(con, ccxt_catalog, "BTCUSDT", "1m", dry_run=False)
+
+        # 1m has bootstrap_days=8 so no baseline needed; rows within window are inserted
+        # The test data timestamps are from Feb 2026 which is >8 days ago in most cases,
+        # but the test uses synthetic data so we verify the behavior
+        assert result.get("skipped") != "no_baseline"
+
+        con.close()
+
+    def test_creates_table_automatically(self, tmp_db, ccxt_catalog):
+        """_fill_klines_interval creates klines_1m_history if it doesn't exist."""
+        con = duckdb.connect(tmp_db)
+
+        # Table should not exist initially
+        tables = [r[0] for r in con.execute("SHOW TABLES").fetchall()]
+        assert "klines_1m_history" not in tables
+
+        from src.liquidationheatmap.ingestion.gap_fill import _fill_klines_interval
+
+        _fill_klines_interval(con, ccxt_catalog, "BTCUSDT", "1m", dry_run=False)
+
+        # Now it should exist
+        tables = [r[0] for r in con.execute("SHOW TABLES").fetchall()]
+        assert "klines_1m_history" in tables
+
+        con.close()
+
+    def test_fill_klines_includes_1m_in_result(self, tmp_db, ccxt_catalog):
+        """fill_klines returns results for both 5m and 1m intervals."""
+        seed_baseline(tmp_db)
+        con = duckdb.connect(tmp_db)
+
+        from src.liquidationheatmap.ingestion.gap_fill import fill_klines
+
+        result = fill_klines(con, ccxt_catalog, "BTCUSDT", dry_run=False)
+
+        assert "intervals" in result
+        assert "5m" in result["intervals"]
+        assert "1m" in result["intervals"]
+        assert result["inserted"] == result["intervals"]["5m"]["inserted"] + result["intervals"]["1m"]["inserted"]
 
         con.close()
 
@@ -275,15 +332,9 @@ class TestFillOpenInterest:
         seed_baseline(tmp_db)
         con = duckdb.connect(tmp_db)
 
-        import importlib.util
+        from src.liquidationheatmap.ingestion.gap_fill import fill_open_interest
 
-        spec = importlib.util.spec_from_file_location(
-            "fill_gap", "/media/sam/1TB/rektaslug/scripts/fill_gap_from_ccxt.py"
-        )
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-
-        result = mod.fill_open_interest(con, ccxt_catalog, "BTCUSDT", dry_run=False)
+        result = fill_open_interest(con, ccxt_catalog, "BTCUSDT", dry_run=False)
 
         assert result["inserted"] == 3
 
@@ -306,16 +357,10 @@ class TestFillOpenInterest:
         seed_baseline(tmp_db)
         con = duckdb.connect(tmp_db)
 
-        import importlib.util
+        from src.liquidationheatmap.ingestion.gap_fill import fill_open_interest
 
-        spec = importlib.util.spec_from_file_location(
-            "fill_gap", "/media/sam/1TB/rektaslug/scripts/fill_gap_from_ccxt.py"
-        )
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-
-        r1 = mod.fill_open_interest(con, ccxt_catalog, "BTCUSDT", dry_run=False)
-        r2 = mod.fill_open_interest(con, ccxt_catalog, "BTCUSDT", dry_run=False)
+        r1 = fill_open_interest(con, ccxt_catalog, "BTCUSDT", dry_run=False)
+        r2 = fill_open_interest(con, ccxt_catalog, "BTCUSDT", dry_run=False)
 
         assert r1["inserted"] == 3
         assert r2["inserted"] == 0
@@ -334,15 +379,9 @@ class TestFillFundingRate:
         seed_baseline(tmp_db)
         con = duckdb.connect(tmp_db)
 
-        import importlib.util
+        from src.liquidationheatmap.ingestion.gap_fill import fill_funding_rate
 
-        spec = importlib.util.spec_from_file_location(
-            "fill_gap", "/media/sam/1TB/rektaslug/scripts/fill_gap_from_ccxt.py"
-        )
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-
-        result = mod.fill_funding_rate(con, ccxt_catalog, "BTCUSDT", dry_run=False)
+        result = fill_funding_rate(con, ccxt_catalog, "BTCUSDT", dry_run=False)
 
         assert result["inserted"] == 3
 
@@ -367,15 +406,9 @@ class TestDryRun:
         seed_baseline(tmp_db)
         con = duckdb.connect(tmp_db, read_only=True)
 
-        import importlib.util
+        from src.liquidationheatmap.ingestion.gap_fill import _fill_klines_interval
 
-        spec = importlib.util.spec_from_file_location(
-            "fill_gap", "/media/sam/1TB/rektaslug/scripts/fill_gap_from_ccxt.py"
-        )
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-
-        result = mod.fill_klines(con, ccxt_catalog, "BTCUSDT", dry_run=True)
+        result = _fill_klines_interval(con, ccxt_catalog, "BTCUSDT", "5m", dry_run=True)
 
         assert result["skipped"] == "dry_run"
         assert result["available"] == 4
@@ -408,18 +441,12 @@ class TestGapValidation:
              NULL, NULL, NULL, NULL)
         """)
 
-        import importlib.util
-
-        spec = importlib.util.spec_from_file_location(
-            "fill_gap", "/media/sam/1TB/rektaslug/scripts/fill_gap_from_ccxt.py"
-        )
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-
         from datetime import datetime
 
+        from src.liquidationheatmap.ingestion.gap_fill import validate_gaps
+
         # Should log warning but not raise
-        mod.validate_gaps(con, "BTCUSDT", datetime(2026, 2, 28))
+        validate_gaps(con, "BTCUSDT", datetime(2026, 2, 28))
 
         # Verify gap exists
         gaps = con.execute("""

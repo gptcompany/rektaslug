@@ -8,7 +8,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.liquidationheatmap.api.main import app, _gap_fill_lock
-from src.liquidationheatmap.ingestion.db_service import DuckDBService, IngestionLockError
+from src.liquidationheatmap.ingestion.db_service import (
+    DuckDBService,
+    INGESTION_LOCK_FILE,
+    IngestionLockError,
+)
 
 
 @pytest.fixture
@@ -102,6 +106,28 @@ class TestCriticalFlows:
             # We can't easily test concurrent requests with TestClient in a single-threaded test
             # but we can verify the state after run_gap_fill is called.
             pass
+
+class TestLifespanStartup:
+    """Test lifespan hook cleans stale locks on startup."""
+
+    def test_stale_lock_cleaned_on_startup(self):
+        """When a stale ingestion lock file exists, the lifespan startup removes it."""
+        # Create a stale lock file before the TestClient context manager triggers lifespan
+        INGESTION_LOCK_FILE.touch()
+        assert INGESTION_LOCK_FILE.exists()
+
+        with TestClient(app):
+            # After lifespan startup, the lock file should be gone
+            assert not INGESTION_LOCK_FILE.exists()
+
+    def test_no_lock_file_startup_is_clean(self):
+        """When no lock file exists at startup, lifespan runs without error."""
+        INGESTION_LOCK_FILE.unlink(missing_ok=True)
+        assert not INGESTION_LOCK_FILE.exists()
+
+        with TestClient(app):
+            assert not INGESTION_LOCK_FILE.exists()
+
 
 class TestLockContentionUnit:
     """Unit tests for DuckDBService lock management."""
