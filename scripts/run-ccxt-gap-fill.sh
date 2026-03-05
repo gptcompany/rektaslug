@@ -148,7 +148,7 @@ run_gap_fill_cli_fallback() {
     return "$cli_status"
 }
 
-response=$(api_post_capture "/api/v1/gap-fill" 30)
+response=$(api_post_capture "/api/v1/gap-fill" 120)
 
 http_code=$(echo "$response" | tail -1)
 body=$(echo "$response" | sed '$d')

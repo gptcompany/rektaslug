@@ -1,8 +1,7 @@
 """Integration tests for critical lock/fallback flows."""
 
 import asyncio
-from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -107,37 +106,18 @@ class TestCriticalFlows:
             # but we can verify the state after run_gap_fill is called.
             pass
 
-    def test_gap_fill_warmup_is_non_blocking(self, client):
-        """Verify that DuckDB warmup runs in background and doesn't block response."""
+    def test_gap_fill_releases_locks_on_success(self, client):
+        """Verify gap-fill releases both locks after successful run."""
         mock_result = {"total_inserted": 42, "symbols": {}}
-        
-        # We patch DuckDBService in the background task to be slow
-        async def slow_warmup(*args, **kwargs):
-            await asyncio.sleep(2.0)
-            return MagicMock()
 
-        with (
-            patch("src.liquidationheatmap.api.main.run_gap_fill", return_value=mock_result),
-            patch("src.liquidationheatmap.api.main._warmup_read_connection", side_effect=slow_warmup) as mock_warmup,
-            patch("src.liquidationheatmap.api.main._settings") as mock_settings
-        ):
-            mock_settings.ccxt_catalog = Path("/tmp")
-            mock_settings.db_path = Path("/tmp/test.db")
-            mock_settings.symbols = []
-            mock_settings.internal_api_token = ""
-
-            import time
-            t0 = time.time()
+        with patch("src.liquidationheatmap.api.main.run_gap_fill", return_value=mock_result):
             response = client.post("/api/v1/gap-fill")
-            duration = time.time() - t0
 
             assert response.status_code == 200
             assert response.json()["total_inserted"] == 42
-            # The response should be around 1s (due to mandatory sleep(1.0) drain)
-            # but definitely less than 2s (warmup duration)
-            assert duration < 1.5
-            # Warmup should have been called (as a task)
-            mock_warmup.assert_called_once()
+            # Both locks must be released
+            assert not DuckDBService.is_ingestion_locked()
+            assert not _gap_fill_lock.locked()
 
 
 class TestLifespanStartup:

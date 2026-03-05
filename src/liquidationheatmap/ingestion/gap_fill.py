@@ -381,6 +381,10 @@ def run_gap_fill(
     logger.info("Gap fill: catalog=%s db=%s symbols=%s dry_run=%s", catalog, db, symbols, dry_run)
 
     con = duckdb.connect(str(db), read_only=dry_run)
+    # Cap DuckDB memory to avoid OOM during WAL checkpoint on the 440GB DB.
+    # The container has a 1GB cgroup limit; uvicorn+Python use ~100MB baseline.
+    if not dry_run:
+        con.execute("SET memory_limit='1GB'")
     summary: dict[str, dict] = {}
 
     try:

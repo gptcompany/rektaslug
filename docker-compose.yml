@@ -9,7 +9,7 @@ x-logging: &default-logging
 x-deploy-service: &default-deploy
   resources:
     limits:
-      memory: 1g
+      memory: 2g
 
 x-core-service: &default-core-service
   image: ${REKTSLUG_CORE_IMAGE:-ghcr.io/gptcompany/rektaslug-core:latest}
