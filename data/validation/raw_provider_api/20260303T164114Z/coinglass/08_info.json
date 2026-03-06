@@ -1,0 +1,14 @@
+{
+  "code": "0",
+  "msg": "successfully",
+  "data": {
+    "id": 339205,
+    "userId": 478073,
+    "apiKey": "6f414a4fcd6c438199ed91afb3552b1d",
+    "grade": 1,
+    "apiGrade": 0,
+    "expTime": 1724743947000,
+    "mailAddress": "samuele.morzenti@gmail.com"
+  },
+  "success": true
+}

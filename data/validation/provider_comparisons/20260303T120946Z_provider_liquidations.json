@@ -1,0 +1,130 @@
+{
+  "timestamp_utc": "2026-03-03T12:09:46.556768+00:00",
+  "manifests": [
+    "/media/sam/1TB/LiquidationHeatmap/data/validation/raw_provider_api/20260303T120355Z/manifest.json"
+  ],
+  "providers": {
+    "coinank": {
+      "provider": "coinank",
+      "source_url": "https://api.coinank.com/api/liqMap/getAggLiqMap?baseCoin=BTC&interval=1d",
+      "saved_file": "data/validation/raw_provider_api/20260303T120355Z/coinank/06_getaggliqmap.json",
+      "dataset_kind": "liquidation_heatmap",
+      "structure": "price_bins",
+      "unit": "usd_notional",
+      "symbol": "BTCUSDT",
+      "exchange": "Binance",
+      "timeframe": "1d",
+      "bucket_count": 933,
+      "total_long": 42566326050.0,
+      "total_short": 96750656197.0,
+      "peak_long": 467546898.0,
+      "peak_short": 554326778.0,
+      "current_price": 67176.0,
+      "price_step_median": 2.0,
+      "time_step_median_ms": null,
+      "notes": [
+        "CoinAnk getAggLiqMap returns one magnitude array per exchange plus a shared price grid.",
+        "Long and short totals are inferred by splitting bins around lastPrice."
+      ]
+    },
+    "coinglass": {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/api/coin/liq/heatmap?type=coin&time=h1",
+      "saved_file": "data/validation/raw_provider_api/20260303T120355Z/coinglass/10_heatmap.json",
+      "dataset_kind": "encrypted_liquidation_heatmap",
+      "structure": "encrypted_base64",
+      "unit": "encrypted_payload",
+      "symbol": null,
+      "exchange": null,
+      "timeframe": "h1",
+      "bucket_count": 0,
+      "total_long": 0.0,
+      "total_short": 0.0,
+      "peak_long": 0.0,
+      "peak_short": 0.0,
+      "current_price": null,
+      "price_step_median": null,
+      "time_step_median_ms": null,
+      "notes": [
+        "Coinglass currently returns an encoded string in data; numeric decoding is not implemented yet.",
+        "Encoded chars: 4032",
+        "Base64-decoded bytes: 3024"
+      ]
+    }
+  },
+  "unparsed_liquidation_like_endpoints": {
+    "coinglass": [
+      "https://capi.coinglass.com/api/strapi/page?slug=liquidations&lang=en"
+    ]
+  },
+  "pairwise_comparisons": [
+    {
+      "providers": [
+        "coinank",
+        "coinglass"
+      ],
+      "dataset_kind_match": false,
+      "structure_match": false,
+      "unit_match": false,
+      "symbol_match": false,
+      "timeframe_match": false,
+      "bucket_count_ratio": null,
+      "long_total_ratio": null,
+      "short_total_ratio": null,
+      "long_peak_ratio": null,
+      "short_peak_ratio": null,
+      "left": {
+        "provider": "coinank",
+        "source_url": "https://api.coinank.com/api/liqMap/getAggLiqMap?baseCoin=BTC&interval=1d",
+        "saved_file": "data/validation/raw_provider_api/20260303T120355Z/coinank/06_getaggliqmap.json",
+        "dataset_kind": "liquidation_heatmap",
+        "structure": "price_bins",
+        "unit": "usd_notional",
+        "symbol": "BTCUSDT",
+        "exchange": "Binance",
+        "timeframe": "1d",
+        "bucket_count": 933,
+        "total_long": 42566326050.0,
+        "total_short": 96750656197.0,
+        "peak_long": 467546898.0,
+        "peak_short": 554326778.0,
+        "current_price": 67176.0,
+        "price_step_median": 2.0,
+        "time_step_median_ms": null,
+        "notes": [
+          "CoinAnk getAggLiqMap returns one magnitude array per exchange plus a shared price grid.",
+          "Long and short totals are inferred by splitting bins around lastPrice."
+        ]
+      },
+      "right": {
+        "provider": "coinglass",
+        "source_url": "https://capi.coinglass.com/api/coin/liq/heatmap?type=coin&time=h1",
+        "saved_file": "data/validation/raw_provider_api/20260303T120355Z/coinglass/10_heatmap.json",
+        "dataset_kind": "encrypted_liquidation_heatmap",
+        "structure": "encrypted_base64",
+        "unit": "encrypted_payload",
+        "symbol": null,
+        "exchange": null,
+        "timeframe": "h1",
+        "bucket_count": 0,
+        "total_long": 0.0,
+        "total_short": 0.0,
+        "peak_long": 0.0,
+        "peak_short": 0.0,
+        "current_price": null,
+        "price_step_median": null,
+        "time_step_median_ms": null,
+        "notes": [
+          "Coinglass currently returns an encoded string in data; numeric decoding is not implemented yet.",
+          "Encoded chars: 4032",
+          "Base64-decoded bytes: 3024"
+        ]
+      }
+    }
+  ],
+  "notes": [
+    "Ratios are left/right, in the provider order shown in each comparison entry.",
+    "CoinAnk and Coinglass parsing currently relies on generic heuristics until their raw payload shapes are captured and specialized.",
+    "Bitcoin CounterFlow /api/liquidations is parsed explicitly and treated as USD-notional time-series liquidations."
+  ]
+}

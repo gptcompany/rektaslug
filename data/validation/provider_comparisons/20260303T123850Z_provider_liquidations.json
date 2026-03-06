@@ -1,0 +1,129 @@
+{
+  "timestamp_utc": "2026-03-03T12:38:50.375366+00:00",
+  "manifests": [
+    "/media/sam/1TB/LiquidationHeatmap/data/validation/raw_provider_api/20260303T123750Z/manifest.json"
+  ],
+  "providers": {
+    "coinank": {
+      "provider": "coinank",
+      "source_url": "https://api.coinank.com/api/liqMap/getAggLiqMap?baseCoin=BTC&interval=1d",
+      "saved_file": "data/validation/raw_provider_api/20260303T123750Z/coinank/06_getaggliqmap.json",
+      "dataset_kind": "liquidation_heatmap",
+      "structure": "price_bins",
+      "unit": "usd_notional",
+      "symbol": "BTCUSDT",
+      "exchange": "Binance",
+      "timeframe": "1d",
+      "bucket_count": 934,
+      "total_long": 48609586204.0,
+      "total_short": 85510528056.0,
+      "peak_long": 473189459.0,
+      "peak_short": 555501910.0,
+      "current_price": 67310.0,
+      "price_step_median": 2.0,
+      "time_step_median_ms": null,
+      "notes": [
+        "CoinAnk getAggLiqMap returns one magnitude array per exchange plus a shared price grid.",
+        "Long and short totals are inferred by splitting bins around lastPrice."
+      ]
+    },
+    "coinglass": {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/api/futures/liquidation/chart?symbol=&timeType=4&range=90d",
+      "saved_file": "data/validation/raw_provider_api/20260303T123750Z/coinglass/08_chart.json",
+      "dataset_kind": "liquidations_timeseries",
+      "structure": "time_candles",
+      "unit": "usd_notional",
+      "symbol": null,
+      "exchange": "All",
+      "timeframe": "90d",
+      "bucket_count": 90,
+      "total_long": 23549425904.080708,
+      "total_short": 12545613380.545174,
+      "peak_long": 2406844845.903241,
+      "peak_short": 626319886.0425978,
+      "current_price": null,
+      "price_step_median": null,
+      "time_step_median_ms": 86400000.0,
+      "notes": [
+        "Decoded from Coinglass encrypted payload using captured response headers plus bundled frontend CryptoJS/pako.",
+        "Coinglass futures/liquidation/chart uses sellVolUsd for long liquidations and buyVolUsd for short liquidations."
+      ]
+    }
+  },
+  "unparsed_liquidation_like_endpoints": {
+    "coinglass": [
+      "https://capi.coinglass.com/api/strapi/page?slug=liquidations&lang=en"
+    ]
+  },
+  "pairwise_comparisons": [
+    {
+      "providers": [
+        "coinank",
+        "coinglass"
+      ],
+      "dataset_kind_match": false,
+      "structure_match": false,
+      "unit_match": true,
+      "symbol_match": false,
+      "timeframe_match": false,
+      "bucket_count_ratio": 10.377777777777778,
+      "long_total_ratio": 2.064151644375195,
+      "short_total_ratio": 6.815970288754754,
+      "long_peak_ratio": 0.1966015631649166,
+      "short_peak_ratio": 0.8869300215101565,
+      "left": {
+        "provider": "coinank",
+        "source_url": "https://api.coinank.com/api/liqMap/getAggLiqMap?baseCoin=BTC&interval=1d",
+        "saved_file": "data/validation/raw_provider_api/20260303T123750Z/coinank/06_getaggliqmap.json",
+        "dataset_kind": "liquidation_heatmap",
+        "structure": "price_bins",
+        "unit": "usd_notional",
+        "symbol": "BTCUSDT",
+        "exchange": "Binance",
+        "timeframe": "1d",
+        "bucket_count": 934,
+        "total_long": 48609586204.0,
+        "total_short": 85510528056.0,
+        "peak_long": 473189459.0,
+        "peak_short": 555501910.0,
+        "current_price": 67310.0,
+        "price_step_median": 2.0,
+        "time_step_median_ms": null,
+        "notes": [
+          "CoinAnk getAggLiqMap returns one magnitude array per exchange plus a shared price grid.",
+          "Long and short totals are inferred by splitting bins around lastPrice."
+        ]
+      },
+      "right": {
+        "provider": "coinglass",
+        "source_url": "https://capi.coinglass.com/api/futures/liquidation/chart?symbol=&timeType=4&range=90d",
+        "saved_file": "data/validation/raw_provider_api/20260303T123750Z/coinglass/08_chart.json",
+        "dataset_kind": "liquidations_timeseries",
+        "structure": "time_candles",
+        "unit": "usd_notional",
+        "symbol": null,
+        "exchange": "All",
+        "timeframe": "90d",
+        "bucket_count": 90,
+        "total_long": 23549425904.080708,
+        "total_short": 12545613380.545174,
+        "peak_long": 2406844845.903241,
+        "peak_short": 626319886.0425978,
+        "current_price": null,
+        "price_step_median": null,
+        "time_step_median_ms": 86400000.0,
+        "notes": [
+          "Decoded from Coinglass encrypted payload using captured response headers plus bundled frontend CryptoJS/pako.",
+          "Coinglass futures/liquidation/chart uses sellVolUsd for long liquidations and buyVolUsd for short liquidations."
+        ]
+      }
+    }
+  ],
+  "notes": [
+    "Ratios are left/right, in the provider order shown in each comparison entry.",
+    "CoinAnk getAggLiqMap is parsed explicitly, but long/short are still inferred by splitting around lastPrice.",
+    "Coinglass will decode encrypted payloads only when the capture includes the required response headers and a local `_app-*.js` bundle is available.",
+    "Bitcoin CounterFlow /api/liquidations is parsed explicitly and treated as USD-notional time-series liquidations."
+  ]
+}

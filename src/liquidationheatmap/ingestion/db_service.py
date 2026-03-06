@@ -940,18 +940,6 @@ class DuckDBService:
             f"calculate_liquidations_oi_based: symbol={symbol}, lookback={lookback_days}d, bin_size={bin_size}"
         )
 
-        kline_table, kline_interval_used = self._resolve_oi_kline_source(
-            symbol=symbol,
-            lookback_days=lookback_days,
-            kline_interval=kline_interval,
-        )
-        logger.info(
-            "OI model kline source: requested=%s selected=%s table=%s",
-            kline_interval,
-            kline_interval_used,
-            kline_table,
-        )
-
         # IMPORTANT: Warn if non-default whale_threshold is used (parameter currently non-functional)
         if whale_threshold != 500000.0:
             logger.warning(
@@ -959,10 +947,6 @@ class DuckDBService:
                 f"uses $500k hardcoded. Parameter currently has no effect. "
                 f"See /tmp/CRITICAL_WHALE_THRESHOLD_BUG_18NOV2025.md for details."
             )
-
-        # MMR (Maintenance Margin Rate) - dynamically computed per-bucket
-        # from official Binance BTC/USDT tiers via MMRTiers CTE in SQL.
-        # See src/liquidationheatmap/models/binance_standard.py lines 22-33.
 
         # Build leverage distribution from parameter or defaults
         if leverage_weights is None:
@@ -977,6 +961,22 @@ class DuckDBService:
         leverage_values = ", ".join(
             f"({lev}, {weight})" for lev, weight in leverage_weights.items()
         )
+
+        kline_table, kline_interval_used = self._resolve_oi_kline_source(
+            symbol=symbol,
+            lookback_days=lookback_days,
+            kline_interval=kline_interval,
+        )
+        logger.info(
+            "OI model kline source: requested=%s selected=%s table=%s",
+            kline_interval,
+            kline_interval_used,
+            kline_table,
+        )
+
+        # MMR (Maintenance Margin Rate) - dynamically computed per-bucket
+        # from official Binance BTC/USDT tiers via MMRTiers CTE in SQL.
+        # See src/liquidationheatmap/models/binance_standard.py lines 22-33.
 
         query = f"""
         WITH Params AS (

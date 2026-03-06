@@ -1,0 +1,44 @@
+{
+  "timestamp_utc": "2026-03-03T13:20:05.485174+00:00",
+  "manifests": [
+    "/media/sam/1TB/LiquidationHeatmap/data/validation/raw_provider_api/20260303T131738Z/manifest.json"
+  ],
+  "providers": {
+    "coinank": {
+      "provider": "coinank",
+      "source_url": "https://api.coinank.com/api/liqMap/getLiqMap?exchange=Binance&symbol=BTCUSDT&interval=1w",
+      "saved_file": "data/validation/raw_provider_api/20260303T131738Z/coinank/13_getliqmap.json",
+      "dataset_kind": "liquidation_heatmap",
+      "structure": "price_bins",
+      "unit": "usd_notional",
+      "symbol": "BTCUSDT",
+      "exchange": "Binance",
+      "timeframe": "1w",
+      "bucket_count": 576,
+      "total_long": 16248473293.0,
+      "total_short": 10841897124.0,
+      "peak_long": 178441996.0,
+      "peak_short": 179328837.0,
+      "current_price": 67096.0,
+      "price_step_median": 2.0,
+      "time_step_median_ms": null,
+      "notes": [
+        "CoinAnk getLiqMap returns a symbol-specific price grid plus leverage ladders (x25, x30, x40, x50, x60, x70, x80, x90, x100).",
+        "The public payload starts at x25 and omits x5/x10, so low-leverage tiers are not part of this series.",
+        "Long and short totals are split using CoinAnk's `lastIndex` pivot."
+      ]
+    }
+  },
+  "unparsed_liquidation_like_endpoints": {
+    "coinank": [
+      "https://api.coinank.com/api/liqMap/getLiqMapSymbolV1?exchange=Binance"
+    ]
+  },
+  "pairwise_comparisons": [],
+  "notes": [
+    "Ratios are left/right, in the provider order shown in each comparison entry.",
+    "CoinAnk getAggLiqMap is parsed explicitly, but long/short are still inferred by splitting around lastPrice.",
+    "Coinglass will decode encrypted payloads only when the capture includes the required response headers and a local `_app-*.js` bundle is available.",
+    "Bitcoin CounterFlow /api/liquidations is parsed explicitly and treated as USD-notional time-series liquidations."
+  ]
+}

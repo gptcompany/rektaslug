@@ -1,0 +1,468 @@
+{
+  "timestamp_utc": "2026-03-03T13:08:13.601713+00:00",
+  "run_dir": "data/validation/raw_provider_api/20260303T130645Z",
+  "args": {
+    "provider": "coinglass",
+    "coin": "BTC",
+    "timeframe": "1w",
+    "exchange": "binance",
+    "max_responses": 20,
+    "post_load_wait_ms": 4000
+  },
+  "providers": [
+    {
+      "provider": "coinglass",
+      "page_url": "https://www.coinglass.com/LiquidityHeatmap",
+      "login_attempted": false,
+      "login_success": false,
+      "capture_count": 16,
+      "captures": [
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/strapi/page?slug=LiquidityHeatmap&lang=en",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "response_headers": {
+            "content-type": "application/json"
+          },
+          "request_headers": {},
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T130645Z/coinglass/01_page.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "content",
+              "createdAt",
+              "id",
+              "locale",
+              "open",
+              "slug",
+              "updatedAt"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/v2/support/symbol",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "response_headers": {
+            "v": "1",
+            "content-type": "application/json",
+            "encryption": "true",
+            "user": "T8Q7nILPELoF7p3qId4tC8gLbc0YhCIH1Rbk0vzhOFA33lAtOR6mt48jHmeU5wUc"
+          },
+          "request_headers": {
+            "cache-ts-v2": "1772543208546"
+          },
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T130645Z/coinglass/02_symbol.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/coin-community/api/userapi/info",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "response_headers": {
+            "content-type": "application/json"
+          },
+          "request_headers": {
+            "cache-ts-v2": "1772543208543"
+          },
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T130645Z/coinglass/03_info.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/ticker?pair=BTCUSDT&exName=Binance&type=Futures",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "response_headers": {
+            "v": "1",
+            "content-type": "application/json",
+            "encryption": "true",
+            "user": "PMuR//Q+1EtrSdt7awPVTYNlZWhuHewr26lPdxgck7gJZGVXTzv4aWo6vaBNCAb+"
+          },
+          "request_headers": {
+            "cache-ts-v2": "1772543208547"
+          },
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T130645Z/coinglass/04_ticker.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/select/coins/tickers?keyword=&type=Futures&exName=Binance",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "response_headers": {
+            "v": "1",
+            "content-type": "application/json",
+            "encryption": "true",
+            "user": "O7GcFEtj9X0Hj6dEK7r1rjz1rr4I2u+fXEUtxANqgkUGh8vz/WLE0ITQUpylNfDz"
+          },
+          "request_headers": {
+            "cache-ts-v2": "1772543208544"
+          },
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T130645Z/coinglass/05_tickers.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/ip/country",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "response_headers": {
+            "v": "1",
+            "content-type": "application/json",
+            "encryption": "true",
+            "user": "V4HH7XHNMR4tbMYEoaSlS91ilWmchom3Io43WBtNYkPE/xkoJpErRjrGL1Xc4gRp"
+          },
+          "request_headers": {
+            "cache-ts-v2": "1772543208543"
+          },
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T130645Z/coinglass/06_country.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/support/symbol",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "response_headers": {
+            "content-type": "application/json",
+            "encryption": "false"
+          },
+          "request_headers": {
+            "cache-ts-v2": "1772543208545"
+          },
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T130645Z/coinglass/07_symbol.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/coin-community/api/alarm/msg",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "response_headers": {
+            "content-type": "application/json"
+          },
+          "request_headers": {
+            "cache-ts-v2": "1772543208541"
+          },
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T130645Z/coinglass/08_msg.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/futures/home/statistics",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "response_headers": {
+            "v": "1",
+            "content-type": "application/json",
+            "encryption": "true",
+            "user": "8YgZyRKbZXgfSJbJdIErXwSGIfzke+CmTCe5862gsolLK9oxcEc3WXj2P0qTm+BU"
+          },
+          "request_headers": {
+            "cache-ts-v2": "1772543208542"
+          },
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T130645Z/coinglass/09_statistics.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/v2/kline?symbol=Binance_BTCUSDT%23kline&interval=m5&endTime=1772543209&minLimit=false&limit=150",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "response_headers": {
+            "v": "1",
+            "content-type": "application/json",
+            "encryption": "true",
+            "user": "RSftL1CjZRTLxp5D2o4tZ6mTZdEPWRpPdFE6lCI+DAQB1uUIm0jdhoHrNbe6GKj3"
+          },
+          "request_headers": {
+            "cache-ts-v2": "1772543209571"
+          },
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T130645Z/coinglass/10_kline.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/select/coins/tickers?keyword=&type=SPOT&exName=Binance",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "response_headers": {
+            "v": "1",
+            "content-type": "application/json",
+            "encryption": "true",
+            "user": "+nJZr0rTX/bv4XBjfM5uBGohBhqLE7B8105WkTYopEcGh8vz/WLE0ITQUpylNfDz"
+          },
+          "request_headers": {
+            "cache-ts-v2": "1772543209373"
+          },
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T130645Z/coinglass/11_tickers.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/v2/kline?symbol=Binance_BTCUSDT%23kline&interval=m5&endTime=1772498400&minLimit=false&limit=150",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "response_headers": {
+            "v": "1",
+            "content-type": "application/json",
+            "encryption": "true",
+            "user": "tp6SiJdlF/3VpfiMXl9Pzz9O700MCVRPjWs1QOrCGBkB1uUIm0jdhoHrNbe6GKj3"
+          },
+          "request_headers": {
+            "cache-ts-v2": "1772543210295"
+          },
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T130645Z/coinglass/12_kline.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/liquidity-heatmap/api/liquidity/v4/heatmap?symbol=Binance_BTCUSDT%23heatmap&interval=m5&endTime=1772543101&minLimit=false&startTime=1772498400&data=XUa7L4oGl2zaIFkN%2Fi%2B12o7BTD1DjkFJZMHM7GG1pkU%3D",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "response_headers": {
+            "content-type": "application/json"
+          },
+          "request_headers": {
+            "cache-ts-v2": "1772543210654"
+          },
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T130645Z/coinglass/13_heatmap.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/v2/kline?symbol=Binance_BTCUSDT%23kline&interval=m5&endTime=1772453400&minLimit=false&limit=150",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "response_headers": {
+            "v": "1",
+            "content-type": "application/json",
+            "encryption": "true",
+            "user": "RAFj5FTe2TckOlEWqsbDZSgaCvYSsqb8d0AXX8N2X5EB1uUIm0jdhoHrNbe6GKj3"
+          },
+          "request_headers": {
+            "cache-ts-v2": "1772543210954"
+          },
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T130645Z/coinglass/14_kline.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/select/coins/tickers?keyword=&type=SPOT&exName=Coinbase",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "response_headers": {
+            "v": "1",
+            "content-type": "application/json",
+            "encryption": "true",
+            "user": "2jG9shzaap/fpUZQ/jinoOLuOZna7BbKwYFVPxR5L/EGh8vz/WLE0ITQUpylNfDz"
+          },
+          "request_headers": {
+            "cache-ts-v2": "1772543210688"
+          },
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T130645Z/coinglass/15_tickers.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/liquidity-heatmap/api/liquidity/v4/heatmap?symbol=Binance_BTCUSDT%23heatmap&interval=m5&endTime=1772498400&minLimit=false&limit=150&data=XUa7L4oGl2zaIFkN%2Fi%2B12o7BTD1DjkFJZMHM7GG1pkU%3D",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "response_headers": {
+            "content-type": "application/json"
+          },
+          "request_headers": {
+            "cache-ts-v2": "1772543210955"
+          },
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T130645Z/coinglass/16_heatmap.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "comparison": {
+    "providers": {
+      "coinglass": {
+        "page_url": "https://www.coinglass.com/LiquidityHeatmap",
+        "capture_count": 16,
+        "login_success": false,
+        "endpoints": [
+          "https://capi.coinglass.com/api/strapi/page?slug=LiquidityHeatmap&lang=en",
+          "https://capi.coinglass.com/api/v2/support/symbol",
+          "https://capi.coinglass.com/coin-community/api/userapi/info",
+          "https://capi.coinglass.com/api/ticker?pair=BTCUSDT&exName=Binance&type=Futures",
+          "https://capi.coinglass.com/api/select/coins/tickers?keyword=&type=Futures&exName=Binance",
+          "https://capi.coinglass.com/api/ip/country",
+          "https://capi.coinglass.com/api/support/symbol",
+          "https://capi.coinglass.com/coin-community/api/alarm/msg",
+          "https://capi.coinglass.com/api/futures/home/statistics",
+          "https://capi.coinglass.com/api/v2/kline?symbol=Binance_BTCUSDT%23kline&interval=m5&endTime=1772543209&minLimit=false&limit=150",
+          "https://capi.coinglass.com/api/select/coins/tickers?keyword=&type=SPOT&exName=Binance",
+          "https://capi.coinglass.com/api/v2/kline?symbol=Binance_BTCUSDT%23kline&interval=m5&endTime=1772498400&minLimit=false&limit=150",
+          "https://capi.coinglass.com/liquidity-heatmap/api/liquidity/v4/heatmap?symbol=Binance_BTCUSDT%23heatmap&interval=m5&endTime=1772543101&minLimit=false&startTime=1772498400&data=XUa7L4oGl2zaIFkN%2Fi%2B12o7BTD1DjkFJZMHM7GG1pkU%3D",
+          "https://capi.coinglass.com/api/v2/kline?symbol=Binance_BTCUSDT%23kline&interval=m5&endTime=1772453400&minLimit=false&limit=150",
+          "https://capi.coinglass.com/api/select/coins/tickers?keyword=&type=SPOT&exName=Coinbase",
+          "https://capi.coinglass.com/liquidity-heatmap/api/liquidity/v4/heatmap?symbol=Binance_BTCUSDT%23heatmap&interval=m5&endTime=1772498400&minLimit=false&limit=150&data=XUa7L4oGl2zaIFkN%2Fi%2B12o7BTD1DjkFJZMHM7GG1pkU%3D"
+        ]
+      }
+    },
+    "notes": [
+      "This is a raw capture manifest, not a schema-normalized comparison.",
+      "Use the saved JSON bodies to map matching endpoints and units before numerical diffs."
+    ]
+  }
+}

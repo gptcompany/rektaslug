@@ -1,0 +1,71 @@
+{
+  "timestamp_utc": "2026-03-03T17:46:20.001490+00:00",
+  "run_dir": "data/validation/raw_provider_api/20260303T174619Z",
+  "args": {
+    "provider": "coinglass",
+    "coin": "BTC",
+    "timeframe": "1w",
+    "coinglass_timeframe": null,
+    "coinglass_mode": "auto",
+    "exchange": "binance",
+    "max_responses": 25,
+    "post_load_wait_ms": 8000
+  },
+  "providers": [
+    {
+      "provider": "coinglass",
+      "page_url": "https://www.coinglass.com/pro/futures/LiquidationMap",
+      "login_attempted": true,
+      "login_success": true,
+      "requested_ui_timeframe": "7 day",
+      "timeframe_applied": true,
+      "capture_count": 1,
+      "captures": [
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/index/5/liqMap?merge=true&symbol=Binance_BTCUSDT&interval=5&limit=2000&data=REDACTED",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "response_headers": {
+            "encryption": "true",
+            "user": "PzbLDauJ8bByS82exUPM/PmEp7SD9GJ5CrfjD0VCAKN9La6NSzaq9PTlYg9svWJi",
+            "v": "2",
+            "time": "1772559979872"
+          },
+          "request_headers": {},
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T174619Z/coinglass/01_liqmap.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ],
+            "success": true,
+            "code": "0"
+          }
+        }
+      ],
+      "capture_mode": "rest"
+    }
+  ],
+  "comparison": {
+    "providers": {
+      "coinglass": {
+        "page_url": "https://www.coinglass.com/pro/futures/LiquidationMap",
+        "capture_count": 1,
+        "login_success": true,
+        "endpoints": [
+          "https://capi.coinglass.com/api/index/5/liqMap?merge=true&symbol=Binance_BTCUSDT&interval=5&limit=2000&data=REDACTED"
+        ]
+      }
+    },
+    "notes": [
+      "This is a raw capture manifest, not a schema-normalized comparison.",
+      "Use the saved JSON bodies to map matching endpoints and units before numerical diffs."
+    ]
+  }
+}

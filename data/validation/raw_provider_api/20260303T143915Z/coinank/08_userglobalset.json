@@ -1,0 +1,16 @@
+{
+  "success": true,
+  "code": "1",
+  "extCode": null,
+  "msg": null,
+  "data": {
+    "id": "660c134a96b177e1fd2cf16a",
+    "userId": "-1",
+    "webNoticeConfig": {
+      "enable": true,
+      "audio": true
+    }
+  },
+  "ext": null,
+  "ext1": null
+}

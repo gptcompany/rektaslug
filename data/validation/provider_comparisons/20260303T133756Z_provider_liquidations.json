@@ -1,0 +1,47 @@
+{
+  "timestamp_utc": "2026-03-03T13:37:56.385947+00:00",
+  "manifests": [
+    "/media/sam/1TB/LiquidationHeatmap/data/validation/raw_provider_api/20260303T133705Z/manifest.json"
+  ],
+  "providers": {
+    "coinglass": {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/api/index/v5/liqHeatMap?merge=true&symbol=Binance_BTCUSDT&interval=5&limit=288&data=23I3mJTbNuMJhAGsE3eiM5wcAe2z9CvA1a712VcYMq4%3D",
+      "saved_file": "data/validation/raw_provider_api/20260303T133705Z/coinglass/05_liqheatmap.json",
+      "dataset_kind": "encrypted_liquidation_heatmap",
+      "structure": "encrypted_base64",
+      "unit": "encrypted_payload",
+      "symbol": "Binance_BTCUSDT",
+      "exchange": null,
+      "timeframe": null,
+      "bucket_count": 0,
+      "total_long": 0.0,
+      "total_short": 0.0,
+      "peak_long": 0.0,
+      "peak_short": 0.0,
+      "current_price": null,
+      "price_step_median": null,
+      "time_step_median_ms": null,
+      "notes": [
+        "Coinglass returned an encoded string in `data`; numeric decode was not completed for this capture.",
+        "Encoded chars: 121068",
+        "Base64-decoded bytes: 90800",
+        "Captured Coinglass response header keys: content-type, encryption, user, v",
+        "Derived seed key from Coinglass header/path flow (v=1).",
+        "Payload decode failed: [Errno 7] Argument list too long: 'node'"
+      ]
+    }
+  },
+  "unparsed_liquidation_like_endpoints": {
+    "coinglass": [
+      "https://capi.coinglass.com/api/strapi/page?slug=pro-futures-LiquidationHeatMapNew&lang=en"
+    ]
+  },
+  "pairwise_comparisons": [],
+  "notes": [
+    "Ratios are left/right, in the provider order shown in each comparison entry.",
+    "CoinAnk getAggLiqMap is parsed explicitly, but long/short are still inferred by splitting around lastPrice.",
+    "Coinglass will decode encrypted payloads only when the capture includes the required response headers and a local `_app-*.js` bundle is available.",
+    "Bitcoin CounterFlow /api/liquidations is parsed explicitly and treated as USD-notional time-series liquidations."
+  ]
+}

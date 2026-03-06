@@ -88,8 +88,15 @@ ignore = ["E501"]
 "src/liquidationheatmap/api/main.py" = ["E402"]
 
 [tool.mutmut]
-paths_to_mutate = "src/liquidationheatmap/ingestion/gap_fill.py"
+paths_to_mutate = [
+    "src/liquidationheatmap/ingestion/gap_fill.py",
+    "src/liquidationheatmap/ingestion/db_service.py",
+    "src/liquidationheatmap/api/main.py"
+]
 tests_dir = "tests/"
+backup = false
+runner = "python3 -m pytest -x"
+dict_synonyms = ["Struct", "dict"]
 
 [dependency-groups]
 dev = [

@@ -1,0 +1,16 @@
+{
+  "success": true,
+  "code": "1",
+  "extCode": null,
+  "msg": null,
+  "data": {
+    "id": "69a08d7d07091a4027fbcd8a",
+    "userId": "83e27a3f00d042569954536a0ec01266",
+    "type": "new_member_month_auto",
+    "create_time": 1772129661032,
+    "expire_time": 1772734461032,
+    "promotion": ""
+  },
+  "ext": null,
+  "ext1": null
+}

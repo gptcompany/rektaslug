@@ -1,0 +1,143 @@
+{
+  "timestamp_utc": "2026-03-03T11:33:52.160820+00:00",
+  "run_dir": "data/validation/raw_provider_api/20260303T113339Z",
+  "args": {
+    "provider": "bitcoincounterflow",
+    "coin": "BTC",
+    "timeframe": "1w",
+    "exchange": "binance",
+    "max_responses": 6,
+    "post_load_wait_ms": 3000
+  },
+  "providers": [
+    {
+      "provider": "bitcoincounterflow",
+      "page_url": "https://bitcoincounterflow.com/liquidation-heatmap/",
+      "login_attempted": false,
+      "login_success": false,
+      "capture_count": 6,
+      "captures": [
+        {
+          "provider": "bitcoincounterflow",
+          "source_url": "https://api.bitcoincounterflow.com/api/bitcoin-performance",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json; charset=utf-8",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T113339Z/bitcoincounterflow/01_bitcoin_performance.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "ath",
+              "athDate",
+              "athDrawdown",
+              "change1m",
+              "change24h",
+              "change7d",
+              "currentPrice"
+            ]
+          }
+        },
+        {
+          "provider": "bitcoincounterflow",
+          "source_url": "https://api.bitcoincounterflow.com/api/last-global-funding-rate",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json; charset=utf-8",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T113339Z/bitcoincounterflow/02_last_global_funding_rate.json",
+          "summary": {
+            "kind": "float",
+            "repr": "0.0028"
+          }
+        },
+        {
+          "provider": "bitcoincounterflow",
+          "source_url": "https://api.bitcoincounterflow.com/api/bitcoin-dominance?days=2",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json; charset=utf-8",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T113339Z/bitcoincounterflow/03_bitcoin_dominance.json",
+          "summary": {
+            "kind": "array",
+            "length": 2,
+            "first_item_keys": [
+              "btcPrice",
+              "dominance",
+              "timestamp"
+            ]
+          }
+        },
+        {
+          "provider": "bitcoincounterflow",
+          "source_url": "https://api.bitcoincounterflow.com/api/google-trends",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json; charset=utf-8",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T113339Z/bitcoincounterflow/04_google_trends.json",
+          "summary": {
+            "kind": "array",
+            "length": 172,
+            "first_item_keys": [
+              "date",
+              "interest"
+            ]
+          }
+        },
+        {
+          "provider": "bitcoincounterflow",
+          "source_url": "https://api.bitcoincounterflow.com/api/liquidations?exchange=BinanceUSDM&symbol=BTCUSDT&timeframe=15m&days=7",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json; charset=utf-8",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T113339Z/bitcoincounterflow/05_liquidations.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "data",
+              "metadata",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "bitcoincounterflow",
+          "source_url": "https://proxy.bitcoincounterflow.com/binance-proxy?symbol=BTCUSDT&interval=1h&limit=720&startTime=1769945624756&endTime=1772537624756",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json; charset=utf-8",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T113339Z/bitcoincounterflow/06_binance_proxy.json",
+          "summary": {
+            "kind": "array",
+            "length": 720
+          }
+        }
+      ]
+    }
+  ],
+  "comparison": {
+    "providers": {
+      "bitcoincounterflow": {
+        "page_url": "https://bitcoincounterflow.com/liquidation-heatmap/",
+        "capture_count": 6,
+        "login_success": false,
+        "endpoints": [
+          "https://api.bitcoincounterflow.com/api/bitcoin-performance",
+          "https://api.bitcoincounterflow.com/api/last-global-funding-rate",
+          "https://api.bitcoincounterflow.com/api/bitcoin-dominance?days=2",
+          "https://api.bitcoincounterflow.com/api/google-trends",
+          "https://api.bitcoincounterflow.com/api/liquidations?exchange=BinanceUSDM&symbol=BTCUSDT&timeframe=15m&days=7",
+          "https://proxy.bitcoincounterflow.com/binance-proxy?symbol=BTCUSDT&interval=1h&limit=720&startTime=1769945624756&endTime=1772537624756"
+        ]
+      }
+    },
+    "notes": [
+      "This is a raw capture manifest, not a schema-normalized comparison.",
+      "Use the saved JSON bodies to map matching endpoints and units before numerical diffs."
+    ]
+  }
+}

@@ -1,21 +1,66 @@
 {
   "testModules": [
     {
-      "moduleId": "tests/test_visual/test_liqmap_visual.py",
+      "moduleId": "tests/test_api/test_routes_robustness.py",
       "tests": [
         {
-          "name": "test_preflight_liqmap_api_parses_response",
-          "fullName": "tests/test_visual/test_liqmap_visual.py::test_preflight_liqmap_api_parses_response",
+          "name": "test_health_check",
+          "fullName": "tests/test_api/test_routes_robustness.py::TestApiRobustness::test_health_check",
           "state": "passed"
         },
         {
-          "name": "test_preflight_liqmap_api_handles_error",
-          "fullName": "tests/test_visual/test_liqmap_visual.py::test_preflight_liqmap_api_handles_error",
+          "name": "test_heatmap_with_real_data",
+          "fullName": "tests/test_api/test_routes_robustness.py::TestApiRobustness::test_heatmap_with_real_data",
           "state": "passed"
         },
         {
-          "name": "test_validate_liqmap_cli_args_defaults",
-          "fullName": "tests/test_visual/test_liqmap_visual.py::test_validate_liqmap_cli_args_defaults",
+          "name": "test_compare_models_real",
+          "fullName": "tests/test_api/test_routes_robustness.py::TestApiRobustness::test_compare_models_real",
+          "state": "passed"
+        },
+        {
+          "name": "test_liquidation_history_real",
+          "fullName": "tests/test_api/test_routes_robustness.py::TestApiRobustness::test_liquidation_history_real",
+          "state": "passed"
+        },
+        {
+          "name": "test_klines_aggregation_real",
+          "fullName": "tests/test_api/test_routes_robustness.py::TestApiRobustness::test_klines_aggregation_real",
+          "state": "passed"
+        },
+        {
+          "name": "test_invalid_symbol_400",
+          "fullName": "tests/test_api/test_routes_robustness.py::TestApiRobustness::test_invalid_symbol_400",
+          "state": "passed"
+        },
+        {
+          "name": "test_ingestion_lock_503",
+          "fullName": "tests/test_api/test_routes_robustness.py::TestApiRobustness::test_ingestion_lock_503",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "tests/test_coverage_booster.py",
+      "tests": [
+        {
+          "name": "test_heatmap_timeseries_complex",
+          "fullName": "tests/test_coverage_booster.py::TestApiBooster::test_heatmap_timeseries_complex",
+          "state": "passed"
+        },
+        {
+          "name": "test_klines_all_variants",
+          "fullName": "tests/test_coverage_booster.py::TestApiBooster::test_klines_all_variants",
+          "state": "passed"
+        },
+        {
+          "name": "test_auth_failures",
+          "fullName": "tests/test_coverage_booster.py::TestApiBooster::test_auth_failures",
+          "state": "passed"
+        },
+        {
+          "name": "test_validation_errors",
+          "fullName": "tests/test_coverage_booster.py::TestApiBooster::test_validation_errors",
           "state": "passed"
         }
       ]

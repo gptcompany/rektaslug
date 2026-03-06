@@ -1,0 +1,20 @@
+{
+  "success": true,
+  "code": "1",
+  "extCode": null,
+  "msg": null,
+  "data": {
+    "id": "64ea08776bcfb04f480e7e48",
+    "categoryKey": "Futures",
+    "categoryName": null,
+    "language": "en",
+    "seoTitle": "Liquidation Map",
+    "seoDescription": "Liquidation Map",
+    "seoKeyWords": "Liquidation Map",
+    "title": "Liquidation Map",
+    "content": "<p>The liquidation map and liquidation map allow market traders to chart leverage liquidation, which means predicting price behavior based on the stock of leverage positions in the cycle and the distribution of long and short positions at different prices, and then quantifying the liquidation intensity of the long and short sides.</p><p><br></p><p>When the long and short combinations of different leverages within the time period are displayed on the picture as liquidation clusters at regional prices, the denser the cluster, the greater the liquidation intensity. Here is what happens when traders trade on unregulated cryptocurrency derivatives exchanges. The risk of being exposed all the time is the risk of liquidation (explosion). When the liquidation price is triggered, the trader's position will be forcibly closed by the exchange's risk engine. Small positions will have little impact on the price and market, but liquidation clusters are positions at similar prices. Once liquidated, it will create a terrible situation. \"Chain reaction\", because when positions at certain key points are liquidated, they are traded at market prices. This will accelerate the price push and cause more nearby positions to be liquidated, which will have a greater impact on the price. At this time, the price Large fluctuations are the big liquidity that the main players like, and it is easier for the main institutions to enter the market with large orders.</p><p><br></p><p><img src=\"https://app.cdnblock.com/upload/1713365866942-1.png\"></p><p>What do the two axes represent?</p><p>The X-axis represents the bid price, and the Y-axis represents the relative strength of liquidations. The columns on the liquidation chart actually show the importance or strength of each liquidation cluster relative to adjacent liquidation clusters, not the precise number of contracts to be liquidated or the value of the contracts. Therefore, the liquidation chart shows what will happen when the underlying price reaches a certain position. To what extent is it affected. Higher \"clearing bars\" indicate stronger liquidation</p><p>Note: The different colors are only for the user to distinguish between different liquidation clusters</p><p><br></p><p>Using the liquidation map you can:</p><p>- Breakout trading - Profitable scalping </p><p>- Refer to the points for setting stop losses </p><p>- Take profits in areas of high liquidity </p><p>- Enter large positions to create liquidity and avoid unnecessary slippage </p><p>- Gradient according to the intensity of liquidation Predict price fluctuations</p>",
+    "postDate": 1713365874882
+  },
+  "ext": null,
+  "ext1": null
+}

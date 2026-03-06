@@ -1,0 +1,145 @@
+{
+  "timestamp_utc": "2026-03-03T13:20:16.334913+00:00",
+  "manifests": [
+    "/media/sam/1TB/LiquidationHeatmap/data/validation/raw_provider_api/20260303T131738Z/manifest.json",
+    "/media/sam/1TB/LiquidationHeatmap/data/validation/raw_provider_api/20260303T130645Z/manifest.json"
+  ],
+  "providers": {
+    "coinank": {
+      "provider": "coinank",
+      "source_url": "https://api.coinank.com/api/liqMap/getLiqMap?exchange=Binance&symbol=BTCUSDT&interval=1w",
+      "saved_file": "data/validation/raw_provider_api/20260303T131738Z/coinank/13_getliqmap.json",
+      "dataset_kind": "liquidation_heatmap",
+      "structure": "price_bins",
+      "unit": "usd_notional",
+      "symbol": "BTCUSDT",
+      "exchange": "Binance",
+      "timeframe": "1w",
+      "bucket_count": 576,
+      "total_long": 16248473293.0,
+      "total_short": 10841897124.0,
+      "peak_long": 178441996.0,
+      "peak_short": 179328837.0,
+      "current_price": 67096.0,
+      "price_step_median": 2.0,
+      "time_step_median_ms": null,
+      "notes": [
+        "CoinAnk getLiqMap returns a symbol-specific price grid plus leverage ladders (x25, x30, x40, x50, x60, x70, x80, x90, x100).",
+        "The public payload starts at x25 and omits x5/x10, so low-leverage tiers are not part of this series.",
+        "Long and short totals are split using CoinAnk's `lastIndex` pivot."
+      ]
+    },
+    "coinglass": {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/liquidity-heatmap/api/liquidity/v4/heatmap?symbol=Binance_BTCUSDT%23heatmap&interval=m5&endTime=1772543101&minLimit=false&startTime=1772498400&data=XUa7L4oGl2zaIFkN%2Fi%2B12o7BTD1DjkFJZMHM7GG1pkU%3D",
+      "saved_file": "data/validation/raw_provider_api/20260303T130645Z/coinglass/13_heatmap.json",
+      "dataset_kind": "liquidity_heatmap",
+      "structure": "time_price_grid",
+      "unit": "relative_density",
+      "symbol": "BTCUSDT",
+      "exchange": "Binance",
+      "timeframe": "m5",
+      "bucket_count": 1673,
+      "total_long": 2450182.399,
+      "total_short": 448181.371,
+      "peak_long": 107834.21599999993,
+      "peak_short": 27913.711000000007,
+      "current_price": 67204.4,
+      "price_step_median": 10.0,
+      "time_step_median_ms": 300000.0,
+      "notes": [
+        "Coinglass /LiquidityHeatmap returns a 2D [timestamp, [[price, intensity], ...]] liquidity grid.",
+        "This is a liquidity heatmap, not a liquidation heatmap; it should not be compared 1:1 with liquidation maps.",
+        "Values were collapsed across time into one aggregate per price bin for cross-provider shape comparison.",
+        "Below/above-price totals were split around current price 67204.4000 from Coinglass /api/ticker price.",
+        "Current-price hint source: https://capi.coinglass.com/api/ticker?pair=BTCUSDT&exName=Binance&type=Futures",
+        "Provider heatmap size metadata: 10",
+        "Provider max cell intensity: 2833.866"
+      ]
+    }
+  },
+  "unparsed_liquidation_like_endpoints": {
+    "coinank": [
+      "https://api.coinank.com/api/liqMap/getLiqMapSymbolV1?exchange=Binance"
+    ],
+    "coinglass": [
+      "https://capi.coinglass.com/api/strapi/page?slug=LiquidityHeatmap&lang=en"
+    ]
+  },
+  "pairwise_comparisons": [
+    {
+      "providers": [
+        "coinank",
+        "coinglass"
+      ],
+      "dataset_kind_match": false,
+      "structure_match": false,
+      "unit_match": false,
+      "symbol_match": true,
+      "timeframe_match": false,
+      "bucket_count_ratio": 0.3442916915720263,
+      "long_total_ratio": 6631.536207113207,
+      "short_total_ratio": 24190.869646833224,
+      "long_peak_ratio": 1654.780853602164,
+      "short_peak_ratio": 6424.399715251045,
+      "left": {
+        "provider": "coinank",
+        "source_url": "https://api.coinank.com/api/liqMap/getLiqMap?exchange=Binance&symbol=BTCUSDT&interval=1w",
+        "saved_file": "data/validation/raw_provider_api/20260303T131738Z/coinank/13_getliqmap.json",
+        "dataset_kind": "liquidation_heatmap",
+        "structure": "price_bins",
+        "unit": "usd_notional",
+        "symbol": "BTCUSDT",
+        "exchange": "Binance",
+        "timeframe": "1w",
+        "bucket_count": 576,
+        "total_long": 16248473293.0,
+        "total_short": 10841897124.0,
+        "peak_long": 178441996.0,
+        "peak_short": 179328837.0,
+        "current_price": 67096.0,
+        "price_step_median": 2.0,
+        "time_step_median_ms": null,
+        "notes": [
+          "CoinAnk getLiqMap returns a symbol-specific price grid plus leverage ladders (x25, x30, x40, x50, x60, x70, x80, x90, x100).",
+          "The public payload starts at x25 and omits x5/x10, so low-leverage tiers are not part of this series.",
+          "Long and short totals are split using CoinAnk's `lastIndex` pivot."
+        ]
+      },
+      "right": {
+        "provider": "coinglass",
+        "source_url": "https://capi.coinglass.com/liquidity-heatmap/api/liquidity/v4/heatmap?symbol=Binance_BTCUSDT%23heatmap&interval=m5&endTime=1772543101&minLimit=false&startTime=1772498400&data=XUa7L4oGl2zaIFkN%2Fi%2B12o7BTD1DjkFJZMHM7GG1pkU%3D",
+        "saved_file": "data/validation/raw_provider_api/20260303T130645Z/coinglass/13_heatmap.json",
+        "dataset_kind": "liquidity_heatmap",
+        "structure": "time_price_grid",
+        "unit": "relative_density",
+        "symbol": "BTCUSDT",
+        "exchange": "Binance",
+        "timeframe": "m5",
+        "bucket_count": 1673,
+        "total_long": 2450182.399,
+        "total_short": 448181.371,
+        "peak_long": 107834.21599999993,
+        "peak_short": 27913.711000000007,
+        "current_price": 67204.4,
+        "price_step_median": 10.0,
+        "time_step_median_ms": 300000.0,
+        "notes": [
+          "Coinglass /LiquidityHeatmap returns a 2D [timestamp, [[price, intensity], ...]] liquidity grid.",
+          "This is a liquidity heatmap, not a liquidation heatmap; it should not be compared 1:1 with liquidation maps.",
+          "Values were collapsed across time into one aggregate per price bin for cross-provider shape comparison.",
+          "Below/above-price totals were split around current price 67204.4000 from Coinglass /api/ticker price.",
+          "Current-price hint source: https://capi.coinglass.com/api/ticker?pair=BTCUSDT&exName=Binance&type=Futures",
+          "Provider heatmap size metadata: 10",
+          "Provider max cell intensity: 2833.866"
+        ]
+      }
+    }
+  ],
+  "notes": [
+    "Ratios are left/right, in the provider order shown in each comparison entry.",
+    "CoinAnk getAggLiqMap is parsed explicitly, but long/short are still inferred by splitting around lastPrice.",
+    "Coinglass will decode encrypted payloads only when the capture includes the required response headers and a local `_app-*.js` bundle is available.",
+    "Bitcoin CounterFlow /api/liquidations is parsed explicitly and treated as USD-notional time-series liquidations."
+  ]
+}

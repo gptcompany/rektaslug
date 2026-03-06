@@ -1,0 +1,38 @@
+{
+  "timestamp_utc": "2026-03-03T11:40:48.458966+00:00",
+  "manifests": [
+    "/media/sam/1TB/LiquidationHeatmap/data/validation/raw_provider_api/20260303T113339Z/manifest.json"
+  ],
+  "providers": {
+    "bitcoincounterflow": {
+      "provider": "bitcoincounterflow",
+      "source_url": "https://api.bitcoincounterflow.com/api/liquidations?exchange=BinanceUSDM&symbol=BTCUSDT&timeframe=15m&days=7",
+      "saved_file": "data/validation/raw_provider_api/20260303T113339Z/bitcoincounterflow/05_liquidations.json",
+      "dataset_kind": "liquidations_timeseries",
+      "structure": "time_candles",
+      "unit": "usd_notional",
+      "symbol": "BTCUSDT",
+      "exchange": "BinanceUSDM",
+      "timeframe": "15m",
+      "bucket_count": 645,
+      "total_long": 46028727.96000002,
+      "total_short": 69511430.19999994,
+      "peak_long": 1315668.5799999998,
+      "peak_short": 5368943.85,
+      "current_price": 66749.2,
+      "price_step_median": null,
+      "time_step_median_ms": 900000.0,
+      "notes": [
+        "Long side is inferred from sell_volume_usd, short side from buy_volume_usd.",
+        "Provider metadata period: 7 days"
+      ]
+    }
+  },
+  "unparsed_liquidation_like_endpoints": {},
+  "pairwise_comparisons": [],
+  "notes": [
+    "Ratios are left/right, in the provider order shown in each comparison entry.",
+    "CoinAnk and Coinglass parsing currently relies on generic heuristics until their raw payload shapes are captured and specialized.",
+    "Bitcoin CounterFlow /api/liquidations is parsed explicitly and treated as USD-notional time-series liquidations."
+  ]
+}

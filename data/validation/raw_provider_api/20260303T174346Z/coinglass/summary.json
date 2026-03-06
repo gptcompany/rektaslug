@@ -1,0 +1,39 @@
+{
+  "provider": "coinglass",
+  "page_url": "https://www.coinglass.com/pro/futures/LiquidationMap",
+  "login_attempted": true,
+  "login_success": true,
+  "requested_ui_timeframe": "7 day",
+  "timeframe_applied": true,
+  "capture_count": 1,
+  "captures": [
+    {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/api/index/5/liqMap?merge=true&symbol=Binance_BTCUSDT&interval=5&limit=2000&data=REDACTED",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json",
+      "response_headers": {
+        "encryption": "true",
+        "user": "+oQViu53WjCGy6M6sspSCfh1qOmwFkGkopLSq5ZFCDYuEG1zFvYpCW+dWC5DOgPK",
+        "v": "2",
+        "time": "1772559827592"
+      },
+      "request_headers": {},
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T174346Z/coinglass/01_liqmap.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "msg",
+          "success"
+        ],
+        "success": true,
+        "code": "0"
+      }
+    }
+  ],
+  "capture_mode": "rest"
+}

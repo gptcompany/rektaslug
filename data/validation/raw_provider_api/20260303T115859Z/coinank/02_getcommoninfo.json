@@ -1,0 +1,16 @@
+{
+  "success": true,
+  "code": "1",
+  "extCode": null,
+  "msg": null,
+  "data": {
+    "zh": "{\"twitter\":\"https://x.com/CoinankCN\",\"telegram\":\"https://t.me/Coinank_Chinese\",\"email\":\"support@coinank.com\",\"bot\":\"https://t.me/coinank_com_bot\",\"channel\":\"https://t.me/coinankchannel\"}",
+    "en": "{\"twitter\":\"https://x.com/CoinAnk\",\"telegram\":\"https://t.me/Coinank_Community\",\"email\":\"support@coinank.com\",\"bot\":\"https://t.me/coinank_com_bot\"}",
+    "tr": "{\"twitter\":\"https://x.com/CoinAnk\",\"telegram\":\"https://t.me/CoinAnk_Turkey\",\"email\":\"support@coinank.com\",\"bot\":\"https://t.me/coinank_com_bot\"}",
+    "de": "{\"twitter\":\"https://x.com/CoinAnk\",\"telegram\":\"https://t.me/Coinank_Community\",\"email\":\"support@coinank.com\",\"bot\":\"https://t.me/coinank_com_bot\"}",
+    "vi": "{\"twitter\":\"https://x.com/CoinAnk\",\"telegram\":\"https://t.me/Coinank_Community\",\"email\":\"support@coinank.com\",\"bot\":\"https://t.me/coinank_com_bot\"}",
+    "zh-tw": "{\"twitter\":\"https://x.com/CoinankCN\",\"telegram\":\"https://t.me/Coinank_Chinese\",\"email\":\"support@coinank.com\",\"bot\":\"https://t.me/coinank_com_bot\",\"channel\":\"https://t.me/coinankchannel\"}"
+  },
+  "ext": null,
+  "ext1": null
+}

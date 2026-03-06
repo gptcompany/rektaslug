@@ -1,0 +1,113 @@
+{
+  "provider": "coinglass",
+  "page_url": "https://www.coinglass.com/LiquidationData",
+  "login_attempted": false,
+  "login_success": false,
+  "capture_count": 4,
+  "captures": [
+    {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/api/strapi/page?slug=liquidations&lang=en",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json",
+      "response_headers": {
+        "content-type": "application/json"
+      },
+      "request_headers": {},
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T123333Z/coinglass/01_page.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "content",
+          "createdAt",
+          "id",
+          "locale",
+          "open",
+          "slug",
+          "updatedAt"
+        ]
+      }
+    },
+    {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/api/v2/support/symbol",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json",
+      "response_headers": {
+        "v": "1",
+        "content-type": "application/json",
+        "encryption": "true",
+        "user": "+eoRMIyUdpNvLIIjDY2pSHdtTxNdIfbGZuCweQFLREw33lAtOR6mt48jHmeU5wUc"
+      },
+      "request_headers": {
+        "cache-ts-v2": "1772541217191"
+      },
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T123333Z/coinglass/02_symbol.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/api/coin/liquidation",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json",
+      "response_headers": {
+        "v": "1",
+        "content-type": "application/json",
+        "encryption": "true",
+        "user": "oRQRm449ZXkRqIkj8gId9OJ8Be88YFTZnTmTGsaU48KYXATcL0NJXp+Relr8jx/9"
+      },
+      "request_headers": {
+        "cache-ts-v2": "1772541217178"
+      },
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T123333Z/coinglass/03_liquidation.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/api/support/symbol",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json",
+      "response_headers": {
+        "content-type": "application/json",
+        "encryption": "false"
+      },
+      "request_headers": {
+        "cache-ts-v2": "1772541217190"
+      },
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T123333Z/coinglass/04_symbol.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "msg",
+          "success"
+        ]
+      }
+    }
+  ]
+}

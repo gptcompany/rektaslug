@@ -1,0 +1,43 @@
+{
+  "timestamp_utc": "2026-03-03T12:35:57.565905+00:00",
+  "manifests": [
+    "/media/sam/1TB/LiquidationHeatmap/data/validation/raw_provider_api/20260303T123429Z/manifest.json"
+  ],
+  "providers": {
+    "coinglass": {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/api/coin/liquidation",
+      "saved_file": "data/validation/raw_provider_api/20260303T123429Z/coinglass/11_liquidation.json",
+      "dataset_kind": "liquidation_summary",
+      "structure": "time_buckets_summary",
+      "unit": "usd_notional",
+      "symbol": null,
+      "exchange": "All",
+      "timeframe": "multi_window",
+      "bucket_count": 4,
+      "total_long": 463104258.2107475,
+      "total_short": 288428288.70327854,
+      "peak_long": 224570160.50979042,
+      "peak_short": 213350834.5436016,
+      "current_price": null,
+      "price_step_median": null,
+      "time_step_median_ms": null,
+      "notes": [
+        "Decoded from Coinglass encrypted payload using captured response headers plus bundled frontend CryptoJS/pako.",
+        "Coinglass coin/liquidation returns aggregate windows such as h1/h4/h12/h24."
+      ]
+    }
+  },
+  "unparsed_liquidation_like_endpoints": {
+    "coinglass": [
+      "https://capi.coinglass.com/api/strapi/page?slug=liquidations&lang=en"
+    ]
+  },
+  "pairwise_comparisons": [],
+  "notes": [
+    "Ratios are left/right, in the provider order shown in each comparison entry.",
+    "CoinAnk getAggLiqMap is parsed explicitly, but long/short are still inferred by splitting around lastPrice.",
+    "Coinglass will decode encrypted payloads only when the capture includes the required response headers and a local `_app-*.js` bundle is available.",
+    "Bitcoin CounterFlow /api/liquidations is parsed explicitly and treated as USD-notional time-series liquidations."
+  ]
+}

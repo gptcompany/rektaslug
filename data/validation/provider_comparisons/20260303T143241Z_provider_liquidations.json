@@ -1,0 +1,48 @@
+{
+  "timestamp_utc": "2026-03-03T14:32:41.347492+00:00",
+  "manifests": [
+    "/media/sam/1TB/LiquidationHeatmap/data/validation/raw_provider_api/20260303T143204Z/manifest.json"
+  ],
+  "providers": {
+    "coinglass": {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/api/index/5/liqMap?merge=true&symbol=Binance_BTCUSDT&interval=1&limit=1500&data=vC3zRNLFiCE730VbV1mBTFskbGEj9XOXeKUStgELwPU%3D",
+      "saved_file": "data/validation/raw_provider_api/20260303T143204Z/coinglass/10_liqmap.json",
+      "dataset_kind": "liquidation_heatmap",
+      "structure": "price_bins",
+      "unit": "usd_notional",
+      "symbol": "BTCUSDT",
+      "exchange": "Binance",
+      "timeframe": "1_x1500",
+      "bucket_count": 214,
+      "total_long": 414732699.2600003,
+      "total_short": 816454403.7199998,
+      "peak_long": 27483767.92,
+      "peak_short": 33485909.41,
+      "current_price": 67130.0,
+      "price_step_median": 49.0,
+      "time_step_median_ms": null,
+      "notes": [
+        "Decoded from Coinglass encrypted payload using captured response headers plus bundled frontend CryptoJS/pako.",
+        "Derived seed key from Coinglass header/path flow (v=1).",
+        "Coinglass pro /api/index/v5/liqMap returns a price-bucket liquidation map under `liqMapV2`.",
+        "Each `liqMapV2[price]` entry is a list of clusters shaped like [price, value, leverage, heat_band].",
+        "This normalization sums cluster values inside each top-level bucket; 214 active buckets and 318 clusters were present.",
+        "Below/above-price totals were split around decoded lastPrice 67130.0000.",
+        "Values are treated as USD-notional based on endpoint semantics and magnitude."
+      ]
+    }
+  },
+  "unparsed_liquidation_like_endpoints": {
+    "coinglass": [
+      "https://capi.coinglass.com/api/strapi/page?slug=pro-futures-LiquidationMap&lang=en"
+    ]
+  },
+  "pairwise_comparisons": [],
+  "notes": [
+    "Ratios are left/right, in the provider order shown in each comparison entry.",
+    "CoinAnk getAggLiqMap is parsed explicitly, but long/short are still inferred by splitting around lastPrice.",
+    "Coinglass will decode encrypted payloads only when the capture includes the required response headers and a local `_app-*.js` bundle is available.",
+    "Bitcoin CounterFlow /api/liquidations is parsed explicitly and treated as USD-notional time-series liquidations."
+  ]
+}

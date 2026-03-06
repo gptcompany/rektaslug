@@ -140,7 +140,7 @@ class BinanceStandardBiasModel(BinanceStandardModel):
         # Prepare liquidation levels
         liquidations = []
         timestamp = datetime.now()
-        leverage_tiers = leverage_tiers or self.DEFAULT_LEVERAGE_TIERS
+        leverage_tiers = leverage_tiers or [5, 10, 25, 50, 100]
         mmr = self._get_mmr(open_interest)
 
         import numpy as np

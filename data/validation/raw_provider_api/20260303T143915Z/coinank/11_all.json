@@ -1,0 +1,29 @@
+{
+  "success": true,
+  "code": "1",
+  "extCode": null,
+  "msg": null,
+  "data": {
+    "liquidation": "243668853.4449139220019695938800000000",
+    "ticker": "203104979300.9997832129736451666822",
+    "marketCpaValue": "0.5849",
+    "openInterest": "74798863660.80944177492057860000000",
+    "okexPersonChange": "0.0412",
+    "liquidationChange": "0.1483",
+    "longRatio": "0.5093",
+    "cnnValue": "15",
+    "binancePersonValue": "1.6896",
+    "cnnChange": "0.6667",
+    "OIChange": "-0.0055",
+    "binancePersonChange": "-0.0578",
+    "btcMarketCap": "1378518508749.79117777",
+    "shortRatio": "0.4907",
+    "liquidationLong": "136488595.3610626069999390952000000000",
+    "tickerChange": "0.3187",
+    "okexPersonValue": "1.77",
+    "liquidationShort": "107180258.0838513150020304986800000000",
+    "marketCpaChange": "0.0000897"
+  },
+  "ext": null,
+  "ext1": null
+}

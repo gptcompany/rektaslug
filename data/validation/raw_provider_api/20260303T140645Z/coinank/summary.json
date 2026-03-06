@@ -1,0 +1,484 @@
+{
+  "provider": "coinank",
+  "page_url": "https://coinank.com/chart/derivatives/liq-map/binance/btcusdt/1d",
+  "login_attempted": true,
+  "login_success": true,
+  "capture_count": 19,
+  "captures": [
+    {
+      "provider": "coinank",
+      "source_url": "https://api.coinank.com/api/eventAction",
+      "status": 200,
+      "method": "POST",
+      "content_type": "application/json;charset=UTF-8",
+      "response_headers": {
+        "content-type": "application/json;charset=UTF-8"
+      },
+      "request_headers": {},
+      "request_post_data": "{\"path\":\"/chart/derivatives/liq-map/binance/btcusdt/1d\",\"fullPath\":\"/chart/derivatives/liq-map/binance/btcusdt/1d\",\"sessionId\":\"b8010899-3b51-471d-b6ae-250cae0603fd\",\"referrer\":\"\"}",
+      "saved_file": "data/validation/raw_provider_api/20260303T140645Z/coinank/01_eventaction.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "ext",
+          "ext1",
+          "extCode",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinank",
+      "source_url": "https://api.coinank.com/api/app/getCommonInfo?infoType=web-metadata",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json;charset=UTF-8",
+      "response_headers": {
+        "content-type": "application/json;charset=UTF-8"
+      },
+      "request_headers": {},
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T140645Z/coinank/02_getcommoninfo.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "ext",
+          "ext1",
+          "extCode",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinank",
+      "source_url": "https://api.coinank.com/api/memberProduct/list?kind=normal_v2",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json;charset=UTF-8",
+      "response_headers": {
+        "content-type": "application/json;charset=UTF-8"
+      },
+      "request_headers": {},
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T140645Z/coinank/03_list.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "ext",
+          "ext1",
+          "extCode",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinank",
+      "source_url": "https://api.coinank.com/api/app/downloadLinks",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json;charset=UTF-8",
+      "response_headers": {
+        "content-type": "application/json;charset=UTF-8"
+      },
+      "request_headers": {},
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T140645Z/coinank/04_downloadlinks.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "ext",
+          "ext1",
+          "extCode",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinank",
+      "source_url": "https://api.coinank.com/api/userGlobalSet",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json;charset=UTF-8",
+      "response_headers": {
+        "content-type": "application/json;charset=UTF-8"
+      },
+      "request_headers": {},
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T140645Z/coinank/05_userglobalset.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "ext",
+          "ext1",
+          "extCode",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinank",
+      "source_url": "https://api.coinank.com/api/baseCoin",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json;charset=UTF-8",
+      "response_headers": {
+        "content-type": "application/json;charset=UTF-8"
+      },
+      "request_headers": {},
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T140645Z/coinank/06_basecoin.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "ext",
+          "ext1",
+          "extCode",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinank",
+      "source_url": "https://api.coinank.com/api/liqMap/getAggLiqMap?baseCoin=BTC&interval=1d",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json;charset=UTF-8",
+      "response_headers": {
+        "content-type": "application/json;charset=UTF-8"
+      },
+      "request_headers": {},
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T140645Z/coinank/07_getaggliqmap.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "ext",
+          "ext1",
+          "extCode",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinank",
+      "source_url": "https://api.coinank.com/api/Statistics/all",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json;charset=UTF-8",
+      "response_headers": {
+        "content-type": "application/json;charset=UTF-8"
+      },
+      "request_headers": {},
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T140645Z/coinank/08_all.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "ext",
+          "ext1",
+          "extCode",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinank",
+      "source_url": "https://api.coinank.com/api/baseCoin/list",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json;charset=UTF-8",
+      "response_headers": {
+        "content-type": "application/json;charset=UTF-8"
+      },
+      "request_headers": {},
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T140645Z/coinank/09_list.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "ext",
+          "ext1",
+          "extCode",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinank",
+      "source_url": "https://api.coinank.com/api/articles/details?id=64ea08776bcfb04f480e7e48&lang=en",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json;charset=UTF-8",
+      "response_headers": {
+        "content-type": "application/json;charset=UTF-8"
+      },
+      "request_headers": {},
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T140645Z/coinank/10_details.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "ext",
+          "ext1",
+          "extCode",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinank",
+      "source_url": "https://api.coinank.com/api/User/isLogin",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json;charset=UTF-8",
+      "response_headers": {
+        "content-type": "application/json;charset=UTF-8"
+      },
+      "request_headers": {},
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T140645Z/coinank/11_islogin.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "ext",
+          "ext1",
+          "extCode",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinank",
+      "source_url": "https://api.coinank.com/api/instruments/base/searchPage?baseCoin=&size=10&page=1",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json;charset=UTF-8",
+      "response_headers": {
+        "content-type": "application/json;charset=UTF-8"
+      },
+      "request_headers": {},
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T140645Z/coinank/12_searchpage.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "ext",
+          "ext1",
+          "extCode",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinank",
+      "source_url": "https://api.coinank.com/api/banners",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json;charset=UTF-8",
+      "response_headers": {
+        "content-type": "application/json;charset=UTF-8"
+      },
+      "request_headers": {},
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T140645Z/coinank/13_banners.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "ext",
+          "ext1",
+          "extCode",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinank",
+      "source_url": "https://api.coinank.com/api/liqMap/getLiqMap?exchange=Binance&symbol=BTCUSDT&interval=1d",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json;charset=UTF-8",
+      "response_headers": {
+        "content-type": "application/json;charset=UTF-8"
+      },
+      "request_headers": {},
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T140645Z/coinank/14_getliqmap.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "ext",
+          "ext1",
+          "extCode",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinank",
+      "source_url": "https://api.coinank.com/api/baseCoin/symbols",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json;charset=UTF-8",
+      "response_headers": {
+        "content-type": "application/json;charset=UTF-8"
+      },
+      "request_headers": {},
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T140645Z/coinank/15_symbols.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "ext",
+          "ext1",
+          "extCode",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinank",
+      "source_url": "https://api.coinank.com/api/Statistics/all",
+      "status": 200,
+      "method": "POST",
+      "content_type": "application/json;charset=UTF-8",
+      "response_headers": {
+        "content-type": "application/json;charset=UTF-8"
+      },
+      "request_headers": {},
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T140645Z/coinank/16_all.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "ext",
+          "ext1",
+          "extCode",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinank",
+      "source_url": "https://api.coinank.com/api/liqMap/getLiqMapSymbolV1?exchange=Binance",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json;charset=UTF-8",
+      "response_headers": {
+        "content-type": "application/json;charset=UTF-8"
+      },
+      "request_headers": {},
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T140645Z/coinank/17_getliqmapsymbolv1.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "ext",
+          "ext1",
+          "extCode",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinank",
+      "source_url": "https://api.coinank.com/api/User/login?userName=samuele.morzenti%40gmail.com&passWord=coinank2026&webLan=en",
+      "status": 200,
+      "method": "POST",
+      "content_type": "application/json;charset=UTF-8",
+      "response_headers": {
+        "content-type": "application/json;charset=UTF-8"
+      },
+      "request_headers": {},
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T140645Z/coinank/18_login.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "ext",
+          "ext1",
+          "extCode",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinank",
+      "source_url": "https://api.coinank.com/api/stripe/coupon/my?type=new_member_month_auto",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json;charset=UTF-8",
+      "response_headers": {
+        "content-type": "application/json;charset=UTF-8"
+      },
+      "request_headers": {},
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T140645Z/coinank/19_my.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "ext",
+          "ext1",
+          "extCode",
+          "msg",
+          "success"
+        ]
+      }
+    }
+  ]
+}

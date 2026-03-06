@@ -1,0 +1,20 @@
+{
+  "success": true,
+  "code": "1",
+  "extCode": null,
+  "msg": null,
+  "data": {
+    "id": "64f056cdc736db3fca4c3d7d",
+    "categoryKey": "Futures",
+    "categoryName": null,
+    "language": "en",
+    "seoTitle": "Liquidation Heatmap",
+    "seoDescription": "Liquidation Heatmap",
+    "seoKeyWords": "Liquidation Heatmap",
+    "title": "Liquidation Heatmap",
+    "content": "<p>Estimated price levels predicting where liquidation events may occur</p><h2>Background</h2><p>A liquidation event occurs when a trader's position is closed out due to the price moving against them and their margin account balance becoming insufficient to cover their open positions. To prevent further losses to the trader and the exchange, most exchanges provide the liquidation level, which is the price at which the trade would be liquidated when entering a leveraged trade.</p><p>Traders who can estimate the locations of other traders' liquidation levels may gain an advantage similar to knowing high liquidity in the order book. The Liquidation Heatmap by Coinank attempts to predict where large liquidations may occur to assist traders.</p><p><img src=\"https://app.cdnblock.com/upload/1713366001994-2.png\"></p><h2>Overview</h2><p>The Liquidation Heatmap calculates the liquidation levels based on market data and different leverage amounts. The calculated levels are then added to a price bucket on the chart. </p><p>As more estimated liquidation levels are added to a certain price the color of the heatmap changes. The color scale ranges from black to yellow, where yellow represents high amount of predicted liquidation levels, allowing traders to identify areas of high liquidity.</p><p>The Liquidation Heatmap predicts where liquidation levels are opening but not closing. Thus, the actual number of liquidations will be lower. When looking at the size, it's essential to read it as a relative number by comparing it to the other levels.</p><p>Users can filter on multiple major exchanges, ticker, and the level of lookback.</p><p>Lookbacks Support: </p><ul><li>12 Hours</li><li>1 Days</li><li>3 Days</li><li>7 Days</li><li>14 Days</li><li>1 Month</li></ul><h2>How traders use this</h2><p>The Liquidation Heatmap enables traders to identify areas of high liquidity, which can be helpful in different ways:</p><p>Magnetic Zones:</p><p>A high concentration of potential liquidation levels at a specific price range may indicate that price might move toward that region. Some traders use these pockets of liquidation levels as a way to gauge which way price is more likely to head towards along with other indicators that may be used as confluence.</p><p> Support / Resistance Zones:</p><p>At high liquidation zones, bigger traders \"whales\" can execute trades quickly and at a favorable price. Once they have entered or exited their orders in this liquidity and price can now reverse.</p><p> In addition liquidation levels can cause massive pressure on either the buy side or sell side of the orderbook causing price to naturally reverse.</p><p>Liquidations play a crucial role in the cryptocurrency market, as they can have a significant impact on traders' positions. By understanding how to utilize the data, traders can make informed trading decisions and potentially increase their chances of success</p><p><br></p>",
+    "postDate": 1713366010359
+  },
+  "ext": null,
+  "ext1": null
+}

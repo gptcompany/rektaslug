@@ -1,0 +1,84 @@
+{
+  "success": true,
+  "code": "1",
+  "extCode": null,
+  "msg": null,
+  "data": [
+    {
+      "image": "https://s.coinank.com/image/banner/rebate/w/active-banner-{1}-{2}.png",
+      "describe": "\u9876\u90e8banner",
+      "link": "https://coinank.com/zh/invite",
+      "type": "top-banner",
+      "theme": "dark",
+      "links": {
+        "zh": "https://coinank.com/zh/invite",
+        "en": "https://coinank.com/invite",
+        "de": "https://coinank.com/de/invite",
+        "tr": "https://coinank.com/tr/invite",
+        "vi": "https://coinank.com/vi/invite",
+        "zh-tw": "https://coinank.com/zh-tw/invite",
+        "es": "https://coinank.com/es/invite",
+        "ja": "https://coinank.com/ja/invite",
+        "ko": "https://coinank.com/ko/invite",
+        "pt": "https://coinank.com/pt/invite",
+        "ru": "https://coinank.com/ru/invite"
+      },
+      "locales": null,
+      "show": true
+    },
+    {
+      "image": "https://s.coinank.com/image/banner/rebate/m/active-banner-{1}-{2}.png",
+      "describe": "\u79fb\u52a8\u7aef\u9876\u90e8banner",
+      "link": "https://coinank.com/invite",
+      "type": "mobile-top-banner",
+      "theme": null,
+      "links": {
+        "zh": "https://coinank.com/zh/invite",
+        "en": "https://coinank.com/invite",
+        "zh-tw": "https://coinank.com/zh-tw/invite",
+        "tr": "https://coinank.com/tr/invite",
+        "vi": "https://coinank.com/vi/invite",
+        "de": "https://coinank.com/de/invite",
+        "pt": "https://coinank.com/pt/invite",
+        "ru": "https://coinank.com/ru/invite",
+        "es": "https://coinank.com/es/invite",
+        "ko": "https://coinank.com/ko/invite",
+        "ja": "https://coinank.com/ja/invite"
+      },
+      "locales": [
+        "zh",
+        "zh-tw",
+        "en"
+      ],
+      "show": true
+    },
+    {
+      "image": "https://s.coinank.com/image/banner/ai/w/active-banner-{1}-{2}.png",
+      "describe": "\u9876\u90e8banner",
+      "link": "https://coinank.com/ai",
+      "type": "top-banner",
+      "theme": "dark",
+      "links": {
+        "zh": "https://coinank.com/zh/ai",
+        "en": "https://coinank.com/ai",
+        "zh-tw": "https://coinank.com/zh-tw/ai",
+        "tr": "https://coinank.com/tr/ai",
+        "vi": "https://coinank.com/vi/ai",
+        "de": "https://coinank.com/de/ai",
+        "pt": "https://coinank.com/pt/ai",
+        "ru": "https://coinank.com/ru/ai",
+        "es": "https://coinank.com/es/ai",
+        "ko": "https://coinank.com/ko/ai",
+        "ja": "https://coinank.com/ja/ai"
+      },
+      "locales": [
+        "zh",
+        "zh-tw",
+        "en"
+      ],
+      "show": true
+    }
+  ],
+  "ext": null,
+  "ext1": null
+}

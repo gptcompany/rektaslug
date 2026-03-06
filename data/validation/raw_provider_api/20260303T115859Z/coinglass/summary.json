@@ -1,0 +1,298 @@
+{
+  "provider": "coinglass",
+  "page_url": "https://www.coinglass.com/LiquidationData",
+  "login_attempted": false,
+  "login_success": false,
+  "capture_count": 16,
+  "captures": [
+    {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/api/strapi/page?slug=liquidations&lang=en",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json",
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/01_page.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "content",
+          "createdAt",
+          "id",
+          "locale",
+          "open",
+          "slug",
+          "updatedAt"
+        ]
+      }
+    },
+    {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/api/coin/liq/heatmap?type=coin&time=h1",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json",
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/02_heatmap.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/api/futures/liquidation/ex/info?time=h4&symbol=",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json",
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/03_info.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/api/coin/liquidation",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json",
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/04_liquidation.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinglass",
+      "source_url": "https://fapi.coinglass.com/api/calendar/liquidation/event",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json",
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/05_event.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/api/support/symbol",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json",
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/06_symbol.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/api/v2/support/symbol",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json",
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/07_symbol.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/coin-community/api/userapi/info",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json",
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/08_info.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/coin-community/api/alarm/msg",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json",
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/09_msg.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/api/futures/liquidation/maxOrder",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json",
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/10_maxorder.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/api/ip/country",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json",
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/11_country.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/api/coin/liq/heatmap?time=h1&type=coin",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json",
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/12_heatmap.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/api/home/coinMarkets?pageNum=1&keyword=",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json",
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/13_coinmarkets.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/api/futures/liquidation/order?volUsd=&symbol=&exName=&pageNum=1&pageSize=1000",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json",
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/14_order.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/api/futures/home/statistics",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json",
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/15_statistics.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "msg",
+          "success"
+        ]
+      }
+    },
+    {
+      "provider": "coinglass",
+      "source_url": "https://capi.coinglass.com/api/futures/liquidation/chart?symbol=&timeType=4&range=90d",
+      "status": 200,
+      "method": "GET",
+      "content_type": "application/json",
+      "request_post_data": "",
+      "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/16_chart.json",
+      "summary": {
+        "kind": "object",
+        "top_level_keys": [
+          "code",
+          "data",
+          "msg",
+          "success"
+        ]
+      }
+    }
+  ]
+}

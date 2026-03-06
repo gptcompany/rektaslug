@@ -1,0 +1,25 @@
+{
+  "success": true,
+  "code": "1",
+  "extCode": null,
+  "msg": null,
+  "data": [
+    {
+      "image": "https://s.coinank.com/image/appstore.svg",
+      "link": "https://apps.apple.com/app/coinank/id6444732071",
+      "nane": "appstore"
+    },
+    {
+      "image": "https://s.coinank.com/image/google-play.svg",
+      "link": "https://play.google.com/store/apps/details?id=com.coinsoho.app",
+      "nane": "google-play"
+    },
+    {
+      "image": "https://s.coinank.com/image/android-apk.svg",
+      "link": "https://s.cdnblock.com/appdownload/coinank39536.apk",
+      "nane": "android-apk"
+    }
+  ],
+  "ext": null,
+  "ext1": null
+}

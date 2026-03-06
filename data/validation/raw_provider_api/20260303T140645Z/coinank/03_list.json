@@ -1,0 +1,182 @@
+{
+  "success": true,
+  "code": "1",
+  "extCode": null,
+  "msg": null,
+  "data": [
+    {
+      "id": "696b2f6f1333eb3f272c6200",
+      "memberType": 0,
+      "details": [],
+      "createTime": "2022-12-31T16:00:00.000+00:00",
+      "updateTime": "2022-12-31T16:00:00.000+00:00",
+      "ranking": 0,
+      "state": "1001",
+      "kind": "normal_v2",
+      "limits": {
+        "derivativeIndicator": {
+          "rule": "allow",
+          "name": "derivativeIndicator",
+          "values": null
+        },
+        "indicator": {
+          "rule": "allow",
+          "name": "indicator",
+          "values": null
+        },
+        "vipIndicator": {
+          "rule": "disallow",
+          "name": "vipIndicator",
+          "values": null
+        }
+      },
+      "vipRules": {
+        "coins": {
+          "rule": "disallow",
+          "name": "coins",
+          "values": []
+        },
+        "indicators": {
+          "rule": "disallow",
+          "name": "indicators",
+          "values": []
+        },
+        "timeFrames": {
+          "rule": "disallow",
+          "name": "timeFrames",
+          "values": []
+        }
+      }
+    },
+    {
+      "id": "696b2f701333eb3f272c6201",
+      "memberType": 50,
+      "details": [],
+      "createTime": "2022-12-31T16:00:00.000+00:00",
+      "updateTime": "2022-12-31T16:00:00.000+00:00",
+      "ranking": 50,
+      "state": "1001",
+      "kind": "normal_v2",
+      "limits": {
+        "derivativeIndicator": {
+          "rule": "allow",
+          "name": "derivativeIndicator",
+          "values": null
+        },
+        "indicator": {
+          "rule": "allow",
+          "name": "indicator",
+          "values": null
+        },
+        "vipIndicator": {
+          "rule": "limit",
+          "name": "vipIndicator",
+          "values": null
+        }
+      },
+      "vipRules": {
+        "coins": {
+          "rule": "allow",
+          "name": "coins",
+          "values": [
+            "BTC",
+            "ETH"
+          ]
+        },
+        "indicators": {
+          "rule": "allow",
+          "name": "indicators",
+          "values": [
+            "400",
+            "403",
+            "406"
+          ]
+        },
+        "timeFrames": {
+          "rule": "allow",
+          "name": "timeFrames",
+          "values": [
+            "15m",
+            "30m",
+            "1h"
+          ]
+        }
+      }
+    },
+    {
+      "id": "696b2f6e1333eb3f272c61ff",
+      "memberType": 200,
+      "details": [
+        {
+          "memberPeriod": "month_auto",
+          "price": 18,
+          "originalPrice": 25,
+          "day": 30,
+          "state": "1001"
+        },
+        {
+          "memberPeriod": "month",
+          "price": 20,
+          "originalPrice": 25,
+          "day": 30,
+          "state": "1001"
+        },
+        {
+          "memberPeriod": "quarterly",
+          "price": 55,
+          "originalPrice": 75,
+          "day": 90,
+          "state": "1001"
+        },
+        {
+          "memberPeriod": "year",
+          "price": 200,
+          "originalPrice": 300,
+          "day": 365,
+          "state": "1001"
+        }
+      ],
+      "createTime": "2022-12-31T16:00:00.000+00:00",
+      "updateTime": "2022-12-31T16:00:00.000+00:00",
+      "ranking": 200,
+      "state": "1001",
+      "kind": "normal_v2",
+      "limits": {
+        "derivativeIndicator": {
+          "rule": "allow",
+          "name": "derivativeIndicator",
+          "values": null
+        },
+        "indicator": {
+          "rule": "allow",
+          "name": "indicator",
+          "values": null
+        },
+        "vipIndicator": {
+          "rule": "allow",
+          "name": "vipIndicator",
+          "values": null
+        }
+      },
+      "vipRules": {
+        "coins": {
+          "rule": "allow",
+          "name": "coins",
+          "values": []
+        },
+        "indicators": {
+          "rule": "allow",
+          "name": "vipIndicator",
+          "values": []
+        },
+        "timeFrames": {
+          "rule": "allow",
+          "name": "timeFrames",
+          "values": []
+        }
+      }
+    }
+  ],
+  "ext": null,
+  "ext1": null
+}

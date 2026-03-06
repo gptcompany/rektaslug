@@ -1,0 +1,689 @@
+{
+  "timestamp_utc": "2026-03-03T11:59:37.912469+00:00",
+  "run_dir": "data/validation/raw_provider_api/20260303T115859Z",
+  "args": {
+    "provider": "both",
+    "coin": "BTC",
+    "timeframe": "1w",
+    "exchange": "binance",
+    "max_responses": 12,
+    "post_load_wait_ms": 5000
+  },
+  "providers": [
+    {
+      "provider": "coinank",
+      "page_url": "https://coinank.com/chart/derivatives/liq-map/binance/btcusdt/1w",
+      "login_attempted": false,
+      "login_success": false,
+      "capture_count": 15,
+      "captures": [
+        {
+          "provider": "coinank",
+          "source_url": "https://api.coinank.com/api/eventAction",
+          "status": 200,
+          "method": "POST",
+          "content_type": "application/json;charset=UTF-8",
+          "request_post_data": "{\"path\":\"/chart/derivatives/liq-map/binance/btcusdt/1w\",\"fullPath\":\"/chart/derivatives/liq-map/binance/btcusdt/1w\",\"sessionId\":\"83265380-cab2-4124-a0df-a6001ed8c3b8\",\"referrer\":\"\"}",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinank/01_eventaction.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "ext",
+              "ext1",
+              "extCode",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinank",
+          "source_url": "https://api.coinank.com/api/app/getCommonInfo?infoType=web-metadata",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json;charset=UTF-8",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinank/02_getcommoninfo.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "ext",
+              "ext1",
+              "extCode",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinank",
+          "source_url": "https://api.coinank.com/api/memberProduct/list?kind=normal_v2",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json;charset=UTF-8",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinank/03_list.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "ext",
+              "ext1",
+              "extCode",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinank",
+          "source_url": "https://api.coinank.com/api/app/downloadLinks",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json;charset=UTF-8",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinank/04_downloadlinks.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "ext",
+              "ext1",
+              "extCode",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinank",
+          "source_url": "https://api.coinank.com/api/app/getCommonInfo?infoType=web-metadata",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json;charset=UTF-8",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinank/05_getcommoninfo.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "ext",
+              "ext1",
+              "extCode",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinank",
+          "source_url": "https://api.coinank.com/api/baseCoin",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json;charset=UTF-8",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinank/06_basecoin.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "ext",
+              "ext1",
+              "extCode",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinank",
+          "source_url": "https://api.coinank.com/api/articles/details?id=64ea08776bcfb04f480e7e48&lang=en",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json;charset=UTF-8",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinank/07_details.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "ext",
+              "ext1",
+              "extCode",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinank",
+          "source_url": "https://api.coinank.com/api/banners",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json;charset=UTF-8",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinank/08_banners.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "ext",
+              "ext1",
+              "extCode",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinank",
+          "source_url": "https://api.coinank.com/api/User/isLogin",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json;charset=UTF-8",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinank/09_islogin.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "ext",
+              "ext1",
+              "extCode",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinank",
+          "source_url": "https://api.coinank.com/api/Statistics/all",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json;charset=UTF-8",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinank/10_all.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "ext",
+              "ext1",
+              "extCode",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinank",
+          "source_url": "https://api.coinank.com/api/baseCoin/list",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json;charset=UTF-8",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinank/11_list.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "ext",
+              "ext1",
+              "extCode",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinank",
+          "source_url": "https://api.coinank.com/api/instruments/base/searchPage?baseCoin=&size=10&page=1",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json;charset=UTF-8",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinank/12_searchpage.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "ext",
+              "ext1",
+              "extCode",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinank",
+          "source_url": "https://api.coinank.com/api/userGlobalSet",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json;charset=UTF-8",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinank/13_userglobalset.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "ext",
+              "ext1",
+              "extCode",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinank",
+          "source_url": "https://api.coinank.com/api/liqMap/getAggLiqMap?baseCoin=BTC&interval=1d",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json;charset=UTF-8",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinank/14_getaggliqmap.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "ext",
+              "ext1",
+              "extCode",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinank",
+          "source_url": "https://api.coinank.com/api/baseCoin/symbols",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json;charset=UTF-8",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinank/15_symbols.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "ext",
+              "ext1",
+              "extCode",
+              "msg",
+              "success"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "provider": "coinglass",
+      "page_url": "https://www.coinglass.com/LiquidationData",
+      "login_attempted": false,
+      "login_success": false,
+      "capture_count": 16,
+      "captures": [
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/strapi/page?slug=liquidations&lang=en",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/01_page.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "content",
+              "createdAt",
+              "id",
+              "locale",
+              "open",
+              "slug",
+              "updatedAt"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/coin/liq/heatmap?type=coin&time=h1",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/02_heatmap.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/futures/liquidation/ex/info?time=h4&symbol=",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/03_info.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/coin/liquidation",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/04_liquidation.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://fapi.coinglass.com/api/calendar/liquidation/event",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/05_event.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/support/symbol",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/06_symbol.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/v2/support/symbol",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/07_symbol.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/coin-community/api/userapi/info",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/08_info.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/coin-community/api/alarm/msg",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/09_msg.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/futures/liquidation/maxOrder",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/10_maxorder.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/ip/country",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/11_country.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/coin/liq/heatmap?time=h1&type=coin",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/12_heatmap.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/home/coinMarkets?pageNum=1&keyword=",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/13_coinmarkets.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/futures/liquidation/order?volUsd=&symbol=&exName=&pageNum=1&pageSize=1000",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/14_order.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/futures/home/statistics",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/15_statistics.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        },
+        {
+          "provider": "coinglass",
+          "source_url": "https://capi.coinglass.com/api/futures/liquidation/chart?symbol=&timeType=4&range=90d",
+          "status": 200,
+          "method": "GET",
+          "content_type": "application/json",
+          "request_post_data": "",
+          "saved_file": "data/validation/raw_provider_api/20260303T115859Z/coinglass/16_chart.json",
+          "summary": {
+            "kind": "object",
+            "top_level_keys": [
+              "code",
+              "data",
+              "msg",
+              "success"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "comparison": {
+    "providers": {
+      "coinank": {
+        "page_url": "https://coinank.com/chart/derivatives/liq-map/binance/btcusdt/1w",
+        "capture_count": 15,
+        "login_success": false,
+        "endpoints": [
+          "https://api.coinank.com/api/eventAction",
+          "https://api.coinank.com/api/app/getCommonInfo?infoType=web-metadata",
+          "https://api.coinank.com/api/memberProduct/list?kind=normal_v2",
+          "https://api.coinank.com/api/app/downloadLinks",
+          "https://api.coinank.com/api/app/getCommonInfo?infoType=web-metadata",
+          "https://api.coinank.com/api/baseCoin",
+          "https://api.coinank.com/api/articles/details?id=64ea08776bcfb04f480e7e48&lang=en",
+          "https://api.coinank.com/api/banners",
+          "https://api.coinank.com/api/User/isLogin",
+          "https://api.coinank.com/api/Statistics/all",
+          "https://api.coinank.com/api/baseCoin/list",
+          "https://api.coinank.com/api/instruments/base/searchPage?baseCoin=&size=10&page=1",
+          "https://api.coinank.com/api/userGlobalSet",
+          "https://api.coinank.com/api/liqMap/getAggLiqMap?baseCoin=BTC&interval=1d",
+          "https://api.coinank.com/api/baseCoin/symbols"
+        ]
+      },
+      "coinglass": {
+        "page_url": "https://www.coinglass.com/LiquidationData",
+        "capture_count": 16,
+        "login_success": false,
+        "endpoints": [
+          "https://capi.coinglass.com/api/strapi/page?slug=liquidations&lang=en",
+          "https://capi.coinglass.com/api/coin/liq/heatmap?type=coin&time=h1",
+          "https://capi.coinglass.com/api/futures/liquidation/ex/info?time=h4&symbol=",
+          "https://capi.coinglass.com/api/coin/liquidation",
+          "https://fapi.coinglass.com/api/calendar/liquidation/event",
+          "https://capi.coinglass.com/api/support/symbol",
+          "https://capi.coinglass.com/api/v2/support/symbol",
+          "https://capi.coinglass.com/coin-community/api/userapi/info",
+          "https://capi.coinglass.com/coin-community/api/alarm/msg",
+          "https://capi.coinglass.com/api/futures/liquidation/maxOrder",
+          "https://capi.coinglass.com/api/ip/country",
+          "https://capi.coinglass.com/api/coin/liq/heatmap?time=h1&type=coin",
+          "https://capi.coinglass.com/api/home/coinMarkets?pageNum=1&keyword=",
+          "https://capi.coinglass.com/api/futures/liquidation/order?volUsd=&symbol=&exName=&pageNum=1&pageSize=1000",
+          "https://capi.coinglass.com/api/futures/home/statistics",
+          "https://capi.coinglass.com/api/futures/liquidation/chart?symbol=&timeType=4&range=90d"
+        ]
+      }
+    },
+    "notes": [
+      "This is a raw capture manifest, not a schema-normalized comparison.",
+      "Use the saved JSON bodies to map matching endpoints and units before numerical diffs."
+    ]
+  }
+}
