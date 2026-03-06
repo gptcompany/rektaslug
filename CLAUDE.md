@@ -148,6 +148,27 @@ Il PC è spesso sotto stress (DuckDB su 6B+ righe, multi-agent, build parallele)
 
 ---
 
+## 🏗️ API Architecture (Modular)
+
+L'API è stata rifattorizzata per modularità e manutenibilità:
+- `src/liquidationheatmap/api/main.py`: Entry point, middleware e lifespan.
+- `src/liquidationheatmap/api/routers/`:
+    - `admin.py`: Controllo ingestion (gap-fill), lock e gestione cache.
+    - `market.py`: Dati di mercato, klines, simboli ed exchange.
+    - `liquidations.py`: Core logic delle heatmap, history e modelli.
+- `src/liquidationheatmap/api/shared.py`: Costanti, dipendenze FastAPI e helper comuni.
+- `src/liquidationheatmap/api/metrics.py`: Definizioni Prometheus.
+- `src/liquidationheatmap/api/cache.py`: Logica di caching in-memory isolata.
+
+## 📊 Observability
+- **Prometheus**: Endpoint disponibile a `/metrics`.
+- **Metriche Core**:
+    - `lh_gap_fill_duration_seconds`: Performance dell'ingestion.
+    - `lh_gap_fill_inserted_rows_total`: Volume di dati processati (labels per symbol/type).
+    - `lh_db_lock_contention_total`: Errori 503 per concorrenza DuckDB.
+
+---
+
 ## 🛡️ Robustness & Error Handling
 
 ### DuckDB Lock & Fallback (rektaslug)
